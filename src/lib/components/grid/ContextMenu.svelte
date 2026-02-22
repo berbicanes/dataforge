@@ -18,6 +18,8 @@
     onCopyRows,
     onCopyAsInsert,
     onCopyAsJson,
+    onCopyAsCsv,
+    onCopyAsMarkdown,
     onSetNull,
     onFilterByValue,
   }: {
@@ -36,6 +38,8 @@
     onCopyRows?: () => void;
     onCopyAsInsert?: () => void;
     onCopyAsJson?: () => void;
+    onCopyAsCsv?: () => void;
+    onCopyAsMarkdown?: () => void;
     onSetNull?: () => void;
     onFilterByValue?: () => void;
   } = $props();
@@ -106,6 +110,14 @@
 
   <button class="menu-item" onclick={() => { onCopyAsJson?.(); onClose(); }} role="menuitem">
     <span class="menu-label">Copy as JSON</span>
+  </button>
+
+  <button class="menu-item" onclick={() => { onCopyAsCsv?.(); onClose(); }} role="menuitem">
+    <span class="menu-label">Copy as CSV</span>
+  </button>
+
+  <button class="menu-item" onclick={() => { onCopyAsMarkdown?.(); onClose(); }} role="menuitem">
+    <span class="menu-label">Copy as Markdown</span>
   </button>
 
   {#if editable && onSetNull}

@@ -1,11 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { ConnectionConfig, DatabaseCategory } from '$lib/types/connection';
-import type { QueryResponse, SortColumn, FilterCondition } from '$lib/types/query';
+import type { QueryResponse, SortColumn, FilterCondition, CellValue, ColumnDef } from '$lib/types/query';
 import type {
   SchemaInfo, TableInfo, ColumnInfo, IndexInfo, ForeignKeyInfo,
   ContainerInfo, ItemInfo, FieldInfo,
   TableStats, RoutineInfo, SequenceInfo, EnumInfo
 } from '$lib/types/schema';
+import type { ImportResult } from '$lib/types/export';
 
 // Connection management
 export async function connectDb(config: ConnectionConfig): Promise<string> {
@@ -168,4 +169,52 @@ export async function getNodeProperties(connectionId: string, label: string): Pr
 
 export async function getNodes(connectionId: string, label: string, limit: number, skip: number): Promise<QueryResponse> {
   return invoke<QueryResponse>('get_nodes', { connectionId, label, limit, skip });
+}
+
+// Export/Import operations
+export async function exportToCsv(
+  filePath: string, columns: ColumnDef[], rows: CellValue[][],
+  connectionId?: string, schema?: string, table?: string, exportAll = false
+): Promise<number> {
+  return invoke<number>('export_to_csv', {
+    connectionId: connectionId ?? null, schema: schema ?? null, table: table ?? null,
+    filePath, columns, rows, exportAll,
+  });
+}
+
+export async function exportToJson(
+  filePath: string, columns: ColumnDef[], rows: CellValue[][],
+  connectionId?: string, schema?: string, table?: string, exportAll = false
+): Promise<number> {
+  return invoke<number>('export_to_json', {
+    connectionId: connectionId ?? null, schema: schema ?? null, table: table ?? null,
+    filePath, columns, rows, exportAll,
+  });
+}
+
+export async function exportToSql(
+  filePath: string, columns: ColumnDef[], rows: CellValue[][],
+  connectionId?: string, schema?: string, table?: string, exportAll = false
+): Promise<number> {
+  return invoke<number>('export_to_sql', {
+    connectionId: connectionId ?? null, schema: schema ?? null, table: table ?? null,
+    filePath, columns, rows, exportAll,
+  });
+}
+
+export async function exportDdl(
+  connectionId: string, schema: string, table: string, filePath?: string
+): Promise<string> {
+  return invoke<string>('export_ddl', {
+    connectionId, schema, table, filePath: filePath ?? null,
+  });
+}
+
+export async function importCsv(
+  connectionId: string, schema: string, table: string,
+  filePath: string, hasHeader = true, delimiter?: string
+): Promise<ImportResult> {
+  return invoke<ImportResult>('import_csv', {
+    connectionId, schema, table, filePath, hasHeader, delimiter: delimiter ?? null,
+  });
 }

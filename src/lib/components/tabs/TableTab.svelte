@@ -6,6 +6,7 @@
   import type { QueryResponse, SortColumn, FilterCondition } from '$lib/types/query';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
   import Pagination from '$lib/components/grid/Pagination.svelte';
+  import ExportMenu from '$lib/components/grid/ExportMenu.svelte';
   import TableStructure from '$lib/components/structure/TableStructure.svelte';
 
   let { tab, onqueryresult }: {
@@ -161,6 +162,19 @@
       Structure
     </button>
     <span class="sub-tab-title truncate">{tab.schema}.{tab.table}</span>
+    {#if activeSubTab === 'data' && result}
+      <ExportMenu
+        columns={result.columns}
+        rows={result.rows}
+        connectionId={tab.connectionId}
+        schema={tab.schema}
+        table={tab.table}
+        showDdl={true}
+        showImport={true}
+        showExportAll={true}
+        onImportComplete={() => { loadData(); loadTotalRows(); }}
+      />
+    {/if}
   </div>
 
   <div class="sub-tab-content">

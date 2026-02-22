@@ -9,6 +9,7 @@ use db::pool::PoolManager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(PoolManager::new())
         .invoke_handler(tauri::generate_handler![
@@ -56,6 +57,12 @@ pub fn run() {
             commands::graph::get_relationship_types,
             commands::graph::get_node_properties,
             commands::graph::get_nodes,
+            // Export/Import
+            commands::export::export_to_csv,
+            commands::export::export_to_json,
+            commands::export::export_to_sql,
+            commands::export::export_ddl,
+            commands::export::import_csv,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -11,6 +11,7 @@
   import { buildSqlNamespace, splitStatements, parseErrorPosition } from '$lib/utils/sqlHelpers';
   import SqlEditor from '$lib/components/editor/SqlEditor.svelte';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
+  import ExportMenu from '$lib/components/grid/ExportMenu.svelte';
   import QueryHistory from '$lib/components/editor/QueryHistory.svelte';
   import SavedQueries from '$lib/components/editor/SavedQueries.svelte';
 
@@ -315,6 +316,13 @@
       </button>
     </div>
     <div class="toolbar-right">
+      {#if results.length > 0}
+        <ExportMenu
+          columns={results[0].columns}
+          rows={results[0].rows}
+          connectionId={tab.connectionId}
+        />
+      {/if}
       {#if showSaveInput}
         <input
           class="save-input"

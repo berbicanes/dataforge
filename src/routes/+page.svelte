@@ -77,6 +77,12 @@
   </div>
 {/if}
 
+{#if uiStore.successMessage}
+  <div class="toast toast-success">
+    {uiStore.successMessage}
+  </div>
+{/if}
+
 <style>
   .app-layout {
     display: grid;

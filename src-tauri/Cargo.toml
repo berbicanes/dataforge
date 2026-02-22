@@ -66,6 +66,12 @@ neo4rs = "0.8"
 aws-sdk-dynamodb = "1.55"
 aws-config = "1.5"
 
+# File dialogs
+tauri-plugin-dialog = "2"
+
+# CSV parsing
+csv = "1.3"
+
 # Utilities
 futures = "0.3"
 

@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import type { ColumnDef, CellValue, SortColumn, FilterCondition } from '$lib/types/query';
   import { extractCellValue, isNull } from '$lib/utils/formatters';
+  import { copyAsCsv, copyAsMarkdown } from '$lib/services/exportService';
   import GridHeader from './GridHeader.svelte';
   import GridRow from './GridRow.svelte';
   import FilterBar from './FilterBar.svelte';
@@ -306,6 +307,20 @@
     }
   }
 
+  function handleCopyAsCsv() {
+    const dataRows = getSelectedRowsData();
+    const targetRows = dataRows.length > 0 ? dataRows : (contextMenu ? [rows[contextMenu.rowIndex]].filter(Boolean) : []);
+    if (targetRows.length === 0) return;
+    copyAsCsv(orderedColumns, targetRows.map(r => reorderRow(r)));
+  }
+
+  function handleCopyAsMarkdown() {
+    const dataRows = getSelectedRowsData();
+    const targetRows = dataRows.length > 0 ? dataRows : (contextMenu ? [rows[contextMenu.rowIndex]].filter(Boolean) : []);
+    if (targetRows.length === 0) return;
+    copyAsMarkdown(orderedColumns, targetRows.map(r => reorderRow(r)));
+  }
+
   // Keyboard copy handler
   function handleKeydown(e: KeyboardEvent) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -408,6 +423,8 @@
         onCopyRows={handleCopyRows}
         onCopyAsInsert={handleCopyAsInsert}
         onCopyAsJson={handleCopyAsJson}
+        onCopyAsCsv={handleCopyAsCsv}
+        onCopyAsMarkdown={handleCopyAsMarkdown}
         onSetNull={editable ? handleSetNullFromMenu : undefined}
         onFilterByValue={onFilterByValue ? handleFilterByValue : undefined}
       />

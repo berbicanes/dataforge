@@ -178,13 +178,13 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Saved queries**: Save/load named queries per connection
 - [x] **Comment/uncomment**: Ctrl+/ to toggle line comments
 
-### Phase 4: Data Export & Import
-- [ ] **Export to CSV**: Export current result set or table data
-- [ ] **Export to JSON**: Export as JSON array
-- [ ] **Export to SQL**: Generate INSERT statements
-- [ ] **Export DDL**: Generate CREATE TABLE statements
-- [ ] **Import CSV**: Bulk load data from CSV files
-- [ ] **Copy as**: Copy selected rows as CSV/JSON/INSERT/Markdown
+### Phase 4: Data Export & Import ✅
+- [x] **Export to CSV**: Export current result set or table data
+- [x] **Export to JSON**: Export as JSON array
+- [x] **Export to SQL**: Generate INSERT statements
+- [x] **Export DDL**: Generate CREATE TABLE statements
+- [x] **Import CSV**: Bulk load data from CSV files
+- [x] **Copy as**: Copy selected rows as CSV/JSON/INSERT/Markdown
 
 ### Phase 5: Schema Browser Improvements ✅
 - [x] **Views**: Show views separately from tables in the tree

@@ -7,6 +7,7 @@ class UiStore {
   isLoading = $state(false);
   loadingMessage = $state('');
   errorMessage = $state<string | null>(null);
+  successMessage = $state<string | null>(null);
 
   openConnectionModal() {
     this.showConnectionModal = true;
@@ -37,6 +38,13 @@ class UiStore {
     setTimeout(() => {
       this.errorMessage = null;
     }, 5000);
+  }
+
+  showSuccess(message: string) {
+    this.successMessage = message;
+    setTimeout(() => {
+      this.successMessage = null;
+    }, 3000);
   }
 }
 
