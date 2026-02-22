@@ -326,17 +326,19 @@ impl SqlDriver for SqliteDriver {
 
         let where_clauses: Vec<String> = pk_columns
             .iter()
-            .zip(pk_values.iter())
-            .map(|(col, val)| format!("\"{}\" = '{}'", col, val.replace('\'', "''")))
+            .map(|col| format!("\"{}\" = ?", col))
             .collect();
 
-        let escaped_value = value.replace('\'', "''");
         let sql = format!(
-            "UPDATE \"{}\" SET \"{}\" = '{}' WHERE {}",
-            table, column, escaped_value, where_clauses.join(" AND ")
+            "UPDATE \"{}\" SET \"{}\" = ? WHERE {}",
+            table, column, where_clauses.join(" AND ")
         );
 
-        sqlx::query(&sql).execute(&self.pool).await?;
+        let mut query = sqlx::query(&sql).bind(value);
+        for pk_val in &pk_values {
+            query = query.bind(pk_val);
+        }
+        query.execute(&self.pool).await?;
         Ok(())
     }
 
@@ -346,14 +348,18 @@ impl SqlDriver for SqliteDriver {
         }
 
         let cols: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
-        let vals: Vec<String> = values.iter().map(|v| format!("'{}'", v.replace('\'', "''"))).collect();
+        let placeholders: Vec<&str> = values.iter().map(|_| "?").collect();
 
         let sql = format!(
             "INSERT INTO \"{}\" ({}) VALUES ({})",
-            table, cols.join(", "), vals.join(", ")
+            table, cols.join(", "), placeholders.join(", ")
         );
 
-        sqlx::query(&sql).execute(&self.pool).await?;
+        let mut query = sqlx::query(&sql);
+        for val in &values {
+            query = query.bind(val);
+        }
+        query.execute(&self.pool).await?;
         Ok(())
     }
 
@@ -371,8 +377,7 @@ impl SqlDriver for SqliteDriver {
 
             let where_clauses: Vec<String> = pk_columns
                 .iter()
-                .zip(pk_values.iter())
-                .map(|(col, val)| format!("\"{}\" = '{}'", col, val.replace('\'', "''")))
+                .map(|col| format!("\"{}\" = ?", col))
                 .collect();
 
             let sql = format!(
@@ -380,7 +385,11 @@ impl SqlDriver for SqliteDriver {
                 table, where_clauses.join(" AND ")
             );
 
-            let result = sqlx::query(&sql).execute(&self.pool).await?;
+            let mut query = sqlx::query(&sql);
+            for pk_val in pk_values {
+                query = query.bind(pk_val);
+            }
+            let result = query.execute(&self.pool).await?;
             total_affected += result.rows_affected();
         }
 

@@ -16,6 +16,30 @@ pub enum AppError {
 
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(String),
+
+    #[error("Query timed out after {0} seconds")]
+    QueryTimeout(u64),
+
+    #[error("Failed to connect to {db_type} at {host}: {cause}")]
+    ConnectionFailed {
+        db_type: String,
+        host: String,
+        cause: String,
+    },
+}
+
+impl AppError {
+    pub fn error_code(&self) -> &'static str {
+        match self {
+            AppError::Database(_) => "DATABASE_ERROR",
+            AppError::ConnectionNotFound(_) => "CONNECTION_NOT_FOUND",
+            AppError::InvalidConfig(_) => "INVALID_CONFIG",
+            AppError::Serialization(_) => "SERIALIZATION_ERROR",
+            AppError::UnsupportedOperation(_) => "UNSUPPORTED_OPERATION",
+            AppError::QueryTimeout(_) => "QUERY_TIMEOUT",
+            AppError::ConnectionFailed { .. } => "CONNECTION_FAILED",
+        }
+    }
 }
 
 impl Serialize for AppError {
@@ -23,7 +47,11 @@ impl Serialize for AppError {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(2))?;
+        map.serialize_entry("code", self.error_code())?;
+        map.serialize_entry("message", &self.to_string())?;
+        map.end()
     }
 }
 

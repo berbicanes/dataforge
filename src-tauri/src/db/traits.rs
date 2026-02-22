@@ -34,6 +34,11 @@ pub trait DbDriver: Send + Sync {
     ) -> Result<QueryResponse, AppError>;
 
     async fn get_item_count(&self, container: &str, item: &str) -> Result<i64, AppError>;
+
+    /// Check if the connection is still alive. Default uses SELECT 1.
+    async fn health_check(&self) -> Result<(), AppError> {
+        self.execute_raw("SELECT 1").await.map(|_| ())
+    }
 }
 
 /// Extended trait for SQL-compatible databases (relational + analytics + CQL).

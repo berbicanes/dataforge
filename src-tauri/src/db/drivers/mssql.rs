@@ -457,19 +457,22 @@ impl SqlDriver for MssqlDriver {
 
         let where_clauses: Vec<String> = pk_columns
             .iter()
-            .zip(pk_values.iter())
-            .map(|(col, val)| format!("[{}] = '{}'", col, val.replace('\'', "''")))
+            .enumerate()
+            .map(|(i, col)| format!("[{}] = @P{}", col, i + 2))
             .collect();
 
-        let escaped_value = value.replace('\'', "''");
         let sql = format!(
-            "UPDATE [{}].[{}] SET [{}] = '{}' WHERE {}",
-            schema, table, column, escaped_value, where_clauses.join(" AND ")
+            "UPDATE [{}].[{}] SET [{}] = @P1 WHERE {}",
+            schema, table, column, where_clauses.join(" AND ")
         );
+
+        let mut all_params: Vec<String> = vec![value.to_string()];
+        all_params.extend(pk_values);
+        let params: Vec<&dyn tiberius::ToSql> = all_params.iter().map(|s| s as &dyn tiberius::ToSql).collect();
 
         let mut conn = self.pool.get().await
             .map_err(|e| AppError::Database(format!("Failed to get MSSQL connection: {}", e)))?;
-        conn.execute(&sql[..], &[]).await
+        conn.execute(&sql[..], &params).await
             .map_err(|e| AppError::Database(format!("MSSQL update error: {}", e)))?;
         Ok(())
     }
@@ -480,16 +483,18 @@ impl SqlDriver for MssqlDriver {
         }
 
         let cols: Vec<String> = columns.iter().map(|c| format!("[{}]", c)).collect();
-        let vals: Vec<String> = values.iter().map(|v| format!("'{}'", v.replace('\'', "''"))).collect();
+        let placeholders: Vec<String> = (1..=values.len()).map(|i| format!("@P{}", i)).collect();
 
         let sql = format!(
             "INSERT INTO [{}].[{}] ({}) VALUES ({})",
-            schema, table, cols.join(", "), vals.join(", ")
+            schema, table, cols.join(", "), placeholders.join(", ")
         );
+
+        let params: Vec<&dyn tiberius::ToSql> = values.iter().map(|s| s as &dyn tiberius::ToSql).collect();
 
         let mut conn = self.pool.get().await
             .map_err(|e| AppError::Database(format!("Failed to get MSSQL connection: {}", e)))?;
-        conn.execute(&sql[..], &[]).await
+        conn.execute(&sql[..], &params).await
             .map_err(|e| AppError::Database(format!("MSSQL insert error: {}", e)))?;
         Ok(())
     }
@@ -510,8 +515,8 @@ impl SqlDriver for MssqlDriver {
 
             let where_clauses: Vec<String> = pk_columns
                 .iter()
-                .zip(pk_values.iter())
-                .map(|(col, val)| format!("[{}] = '{}'", col, val.replace('\'', "''")))
+                .enumerate()
+                .map(|(i, col)| format!("[{}] = @P{}", col, i + 1))
                 .collect();
 
             let sql = format!(
@@ -519,7 +524,9 @@ impl SqlDriver for MssqlDriver {
                 schema, table, where_clauses.join(" AND ")
             );
 
-            let result = conn.execute(&sql[..], &[]).await
+            let params: Vec<&dyn tiberius::ToSql> = pk_values.iter().map(|s| s as &dyn tiberius::ToSql).collect();
+
+            let result = conn.execute(&sql[..], &params).await
                 .map_err(|e| AppError::Database(format!("MSSQL delete error: {}", e)))?;
             total_affected += result.rows_affected().iter().sum::<u64>();
         }

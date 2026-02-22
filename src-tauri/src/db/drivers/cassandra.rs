@@ -293,17 +293,23 @@ impl SqlDriver for CassandraDriver {
 
         let where_clauses: Vec<String> = pk_columns
             .iter()
-            .zip(pk_values.iter())
-            .map(|(col, val)| format!("{} = '{}'", col, val.replace('\'', "''")))
+            .map(|col| format!("{} = ?", col))
             .collect();
 
-        let escaped_value = value.replace('\'', "''");
         let sql = format!(
-            "UPDATE {}.{} SET {} = '{}' WHERE {}",
-            schema, table, column, escaped_value, where_clauses.join(" AND ")
+            "UPDATE {}.{} SET {} = ? WHERE {}",
+            schema, table, column, where_clauses.join(" AND ")
         );
 
-        self.execute_raw(&sql).await?;
+        let mut cql_values: Vec<CqlValue> = vec![CqlValue::Text(value.to_string())];
+        for pk_val in &pk_values {
+            cql_values.push(CqlValue::Text(pk_val.clone()));
+        }
+
+        self.session
+            .query_unpaged(sql.as_str(), &cql_values)
+            .await
+            .map_err(|e| AppError::Database(format!("Cassandra update error: {}", e)))?;
         Ok(())
     }
 
@@ -313,14 +319,19 @@ impl SqlDriver for CassandraDriver {
         }
 
         let cols = columns.join(", ");
-        let vals: Vec<String> = values.iter().map(|v| format!("'{}'", v.replace('\'', "''"))).collect();
+        let placeholders: Vec<&str> = values.iter().map(|_| "?").collect();
 
         let sql = format!(
             "INSERT INTO {}.{} ({}) VALUES ({})",
-            schema, table, cols, vals.join(", ")
+            schema, table, cols, placeholders.join(", ")
         );
 
-        self.execute_raw(&sql).await?;
+        let cql_values: Vec<CqlValue> = values.iter().map(|v| CqlValue::Text(v.clone())).collect();
+
+        self.session
+            .query_unpaged(sql.as_str(), &cql_values)
+            .await
+            .map_err(|e| AppError::Database(format!("Cassandra insert error: {}", e)))?;
         Ok(())
     }
 
@@ -337,8 +348,7 @@ impl SqlDriver for CassandraDriver {
 
             let where_clauses: Vec<String> = pk_columns
                 .iter()
-                .zip(pk_values.iter())
-                .map(|(col, val)| format!("{} = '{}'", col, val.replace('\'', "''")))
+                .map(|col| format!("{} = ?", col))
                 .collect();
 
             let sql = format!(
@@ -346,7 +356,12 @@ impl SqlDriver for CassandraDriver {
                 schema, table, where_clauses.join(" AND ")
             );
 
-            self.execute_raw(&sql).await?;
+            let cql_values: Vec<CqlValue> = pk_values.iter().map(|v| CqlValue::Text(v.clone())).collect();
+
+            self.session
+                .query_unpaged(sql.as_str(), &cql_values)
+                .await
+                .map_err(|e| AppError::Database(format!("Cassandra delete error: {}", e)))?;
             total += 1;
         }
 

@@ -407,6 +407,16 @@ impl DbDriver for DynamoDbDriver {
             .and_then(|t| t.item_count())
             .unwrap_or(0))
     }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        self.client
+            .list_tables()
+            .limit(1)
+            .send()
+            .await
+            .map_err(|e| AppError::Database(format!("DynamoDB health check failed: {}", e)))?;
+        Ok(())
+    }
 }
 
 #[async_trait]

@@ -370,21 +370,23 @@ impl SqlDriver for PostgresDriver {
 
         let where_clauses: Vec<String> = pk_columns
             .iter()
-            .zip(pk_values.iter())
-            .map(|(col, val)| format!("\"{}\" = '{}'", col, val.replace('\'', "''")))
+            .enumerate()
+            .map(|(i, col)| format!("\"{}\" = ${}", col, i + 2))
             .collect();
 
-        let escaped_value = value.replace('\'', "''");
         let sql = format!(
-            "UPDATE \"{}\".\"{}\" SET \"{}\" = '{}' WHERE {}",
+            "UPDATE \"{}\".\"{}\" SET \"{}\" = $1 WHERE {}",
             schema,
             table,
             column,
-            escaped_value,
             where_clauses.join(" AND ")
         );
 
-        sqlx::query(&sql).execute(&self.pool).await?;
+        let mut query = sqlx::query(&sql).bind(value);
+        for pk_val in &pk_values {
+            query = query.bind(pk_val);
+        }
+        query.execute(&self.pool).await?;
         Ok(())
     }
 
@@ -402,20 +404,21 @@ impl SqlDriver for PostgresDriver {
         }
 
         let cols: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
-        let vals: Vec<String> = values
-            .iter()
-            .map(|v| format!("'{}'", v.replace('\'', "''")))
-            .collect();
+        let placeholders: Vec<String> = (1..=values.len()).map(|i| format!("${}", i)).collect();
 
         let sql = format!(
             "INSERT INTO \"{}\".\"{}\" ({}) VALUES ({})",
             schema,
             table,
             cols.join(", "),
-            vals.join(", ")
+            placeholders.join(", ")
         );
 
-        sqlx::query(&sql).execute(&self.pool).await?;
+        let mut query = sqlx::query(&sql);
+        for val in &values {
+            query = query.bind(val);
+        }
+        query.execute(&self.pool).await?;
         Ok(())
     }
 
@@ -443,8 +446,8 @@ impl SqlDriver for PostgresDriver {
 
             let where_clauses: Vec<String> = pk_columns
                 .iter()
-                .zip(pk_values.iter())
-                .map(|(col, val)| format!("\"{}\" = '{}'", col, val.replace('\'', "''")))
+                .enumerate()
+                .map(|(i, col)| format!("\"{}\" = ${}", col, i + 1))
                 .collect();
 
             let sql = format!(
@@ -454,7 +457,11 @@ impl SqlDriver for PostgresDriver {
                 where_clauses.join(" AND ")
             );
 
-            let result = sqlx::query(&sql).execute(&self.pool).await?;
+            let mut query = sqlx::query(&sql);
+            for pk_val in pk_values {
+                query = query.bind(pk_val);
+            }
+            let result = query.execute(&self.pool).await?;
             total_affected += result.rows_affected();
         }
 

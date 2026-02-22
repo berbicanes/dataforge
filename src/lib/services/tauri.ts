@@ -19,9 +19,13 @@ export async function testConnection(config: ConnectionConfig): Promise<boolean>
   return invoke<boolean>('test_connection', { config });
 }
 
+export async function pingConnection(connectionId: string): Promise<boolean> {
+  return invoke<boolean>('ping_connection', { connectionId });
+}
+
 // Query execution
-export async function executeQuery(connectionId: string, sql: string): Promise<QueryResponse> {
-  return invoke<QueryResponse>('execute_query', { connectionId, sql });
+export async function executeQuery(connectionId: string, sql: string, timeoutSecs?: number): Promise<QueryResponse> {
+  return invoke<QueryResponse>('execute_query', { connectionId, sql, timeoutSecs: timeoutSecs ?? null });
 }
 
 // Generic schema browsing (all databases)

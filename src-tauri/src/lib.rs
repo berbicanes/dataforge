@@ -16,6 +16,7 @@ pub fn run() {
             commands::connection::connect_db,
             commands::connection::disconnect_db,
             commands::connection::test_connection,
+            commands::connection::ping_connection,
             // Query execution
             commands::query::execute_query,
             // Generic schema browsing (all databases)

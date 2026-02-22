@@ -337,6 +337,14 @@ impl DbDriver for MongoDbDriver {
             .map_err(|e| AppError::Database(format!("MongoDB count error: {}", e)))?;
         Ok(count as i64)
     }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        let db = self.client.database("admin");
+        db.run_command(mongodb::bson::doc! { "ping": 1 })
+            .await
+            .map_err(|e| AppError::Database(format!("MongoDB ping failed: {}", e)))?;
+        Ok(())
+    }
 }
 
 #[async_trait]

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use log::{error, info, warn};
 use tauri::State;
 
 use crate::db::drivers;
@@ -99,8 +100,15 @@ pub async fn connect_db(
     pool_manager: State<'_, PoolManager>,
 ) -> Result<String, AppError> {
     let id = config.id.clone();
-    let handle = create_driver_handle(&config).await?;
+    info!("Connecting to {:?} '{}'", config.db_type, id);
+
+    let handle = create_driver_handle(&config).await.map_err(|e| {
+        error!("Connection failed for '{}': {}", id, e);
+        e
+    })?;
+
     pool_manager.add(id.clone(), handle).await;
+    info!("Connected to '{}'", id);
     Ok(id)
 }
 
@@ -109,13 +117,38 @@ pub async fn disconnect_db(
     connection_id: String,
     pool_manager: State<'_, PoolManager>,
 ) -> Result<(), AppError> {
-    pool_manager.remove(&connection_id).await
+    info!("Disconnecting '{}'", connection_id);
+    pool_manager.remove(&connection_id).await?;
+    info!("Disconnected '{}'", connection_id);
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn test_connection(config: ConnectionConfig) -> Result<bool, AppError> {
+    info!("Testing connection to {:?}", config.db_type);
     match create_driver_handle(&config).await {
+        Ok(_) => {
+            info!("Connection test successful for {:?}", config.db_type);
+            Ok(true)
+        }
+        Err(e) => {
+            warn!("Connection test failed for {:?}: {}", config.db_type, e);
+            Ok(false)
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn ping_connection(
+    connection_id: String,
+    pool_manager: State<'_, PoolManager>,
+) -> Result<bool, AppError> {
+    let handle = pool_manager.get(&connection_id).await?;
+    match handle.base().health_check().await {
         Ok(_) => Ok(true),
-        Err(_) => Ok(false),
+        Err(e) => {
+            warn!("Health check failed for '{}': {}", connection_id, e);
+            Ok(false)
+        }
     }
 }

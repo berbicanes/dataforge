@@ -214,6 +214,10 @@ impl DbDriver for Neo4jDriver {
         }
         Ok(0)
     }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        self.execute_raw("RETURN 1").await.map(|_| ())
+    }
 }
 
 #[async_trait]

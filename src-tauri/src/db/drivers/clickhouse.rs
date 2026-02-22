@@ -11,6 +11,14 @@ use crate::models::schema::{
     ColumnInfo, ContainerInfo, FieldInfo, ForeignKeyInfo, IndexInfo, ItemInfo, SchemaInfo, TableInfo,
 };
 
+/// Escape a string for ClickHouse SQL literals.
+/// ClickHouse uses backslash escaping inside single-quoted strings.
+fn clickhouse_escape(s: &str) -> String {
+    s.replace('\\', "\\\\")
+     .replace('\'', "\\'")
+     .replace('\0', "\\0")
+}
+
 pub struct ClickHouseDriver {
     client: Client,
 }
@@ -312,13 +320,12 @@ impl SqlDriver for ClickHouseDriver {
         let where_clauses: Vec<String> = pk_columns
             .iter()
             .zip(pk_values.iter())
-            .map(|(col, val)| format!("`{}` = '{}'", col, val.replace('\'', "\\'")))
+            .map(|(col, val)| format!("`{}` = '{}'", col, clickhouse_escape(val)))
             .collect();
 
-        let escaped_value = value.replace('\'', "\\'");
         let sql = format!(
             "ALTER TABLE `{}`.`{}` UPDATE `{}` = '{}' WHERE {}",
-            schema, table, column, escaped_value, where_clauses.join(" AND ")
+            schema, table, column, clickhouse_escape(value), where_clauses.join(" AND ")
         );
 
         self.execute_raw(&sql).await?;
@@ -331,7 +338,7 @@ impl SqlDriver for ClickHouseDriver {
         }
 
         let cols: Vec<String> = columns.iter().map(|c| format!("`{}`", c)).collect();
-        let vals: Vec<String> = values.iter().map(|v| format!("'{}'", v.replace('\'', "\\'"))).collect();
+        let vals: Vec<String> = values.iter().map(|v| format!("'{}'", clickhouse_escape(v))).collect();
 
         let sql = format!(
             "INSERT INTO `{}`.`{}` ({}) VALUES ({})",
@@ -356,7 +363,7 @@ impl SqlDriver for ClickHouseDriver {
             let where_clauses: Vec<String> = pk_columns
                 .iter()
                 .zip(pk_values.iter())
-                .map(|(col, val)| format!("`{}` = '{}'", col, val.replace('\'', "\\'")))
+                .map(|(col, val)| format!("`{}` = '{}'", col, clickhouse_escape(val)))
                 .collect();
 
             let sql = format!(

@@ -155,6 +155,15 @@ impl DbDriver for RedisDriver {
             .map_err(|e| AppError::Database(format!("Redis DBSIZE error: {}", e)))?;
         Ok(count)
     }
+
+    async fn health_check(&self) -> Result<(), AppError> {
+        let mut conn = self.conn.clone();
+        let _: String = redis::cmd("PING")
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| AppError::Database(format!("Redis PING failed: {}", e)))?;
+        Ok(())
+    }
 }
 
 #[async_trait]
