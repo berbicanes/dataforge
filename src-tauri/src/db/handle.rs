@@ -58,4 +58,20 @@ impl DriverHandle {
             )),
         }
     }
+
+    pub async fn begin_transaction(&self) -> Result<(), AppError> {
+        self.as_sql()?.begin_transaction().await
+    }
+
+    pub async fn commit_transaction(&self) -> Result<(), AppError> {
+        self.as_sql()?.commit_transaction().await
+    }
+
+    pub async fn rollback_transaction(&self) -> Result<(), AppError> {
+        self.as_sql()?.rollback_transaction().await
+    }
+
+    pub async fn in_transaction(&self) -> Result<bool, AppError> {
+        self.as_sql()?.in_transaction().await
+    }
 }

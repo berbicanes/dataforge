@@ -12,6 +12,9 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
   import ConnectionModal from '$lib/components/modals/ConnectionModal.svelte';
   import ConfirmDialog from '$lib/components/modals/ConfirmDialog.svelte';
+  import CreateTableModal from '$lib/components/modals/CreateTableModal.svelte';
+  import AlterTableModal from '$lib/components/modals/AlterTableModal.svelte';
+  import IndexModal from '$lib/components/modals/IndexModal.svelte';
 
   let lastExecutionTime = $state<number | null>(null);
   let lastRowCount = $state<number | null>(null);
@@ -69,6 +72,18 @@
 
 {#if uiStore.showConfirmDialog}
   <ConfirmDialog />
+{/if}
+
+{#if uiStore.showCreateTableModal}
+  <CreateTableModal />
+{/if}
+
+{#if uiStore.showAlterTableModal}
+  <AlterTableModal />
+{/if}
+
+{#if uiStore.showIndexModal}
+  <IndexModal />
 {/if}
 
 {#if uiStore.errorMessage}

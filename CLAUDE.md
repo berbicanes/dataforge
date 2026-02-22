@@ -32,7 +32,8 @@ src/                          # Frontend (SvelteKit)
 │   ├── components/
 │   │   ├── editor/           # SqlEditor (CodeMirror, multi-dialect)
 │   │   ├── grid/             # DataGrid, GridHeader, GridRow, GridCell, Pagination
-│   │   ├── modals/           # ConnectionModal (dynamic form for 17 DBs), ConfirmDialog
+│   │   ├── modals/           # ConnectionModal, ConfirmDialog, CreateTableModal,
+│   │   │                     # AlterTableModal, IndexModal
 │   │   ├── sidebar/          # Sidebar, ConnectionList, SchemaTree, TreeNode
 │   │   ├── structure/        # TableStructure, ColumnsView, IndexesView, ForeignKeysView
 │   │   ├── tabs/             # TabBar, TabContent, QueryTab, TableTab,
@@ -48,7 +49,8 @@ src/                          # Frontend (SvelteKit)
 │   │   ├── documentService.ts # MongoDB/DynamoDB CRUD
 │   │   ├── keyvalueService.ts # Redis operations
 │   │   └── graphService.ts   # Neo4j browsing
-│   ├── stores/               # Svelte 5 rune stores (connections, tabs, schema, ui)
+│   ├── stores/               # Svelte 5 rune stores (connections, tabs, schema, ui,
+│   │                         # transaction, changeTracker)
 │   ├── types/
 │   │   ├── connection.ts     # DatabaseType (17), ConnectionConfig, CloudAuth
 │   │   ├── database.ts       # DB_METADATA constant, DB_GROUPS
@@ -71,6 +73,7 @@ src-tauri/                    # Backend (Rust)
 │   │   │                     # SQL: get_schemas, get_tables, get_columns, get_indexes,
 │   │   │                     #   get_foreign_keys, get_table_data, get_row_count,
 │   │   │                     #   update_cell, insert_row, delete_rows
+│   │   ├── transaction.rs    # begin_transaction, commit_transaction, rollback_transaction
 │   │   ├── document.rs       # insert_document, update_document, delete_documents
 │   │   ├── keyvalue.rs       # get_value, set_value, delete_keys, get_key_type, scan_keys
 │   │   └── graph.rs          # get_labels, get_relationship_types, get_node_properties, get_nodes
@@ -134,6 +137,12 @@ npm run check            # TypeScript/Svelte type checking
 - DB_METADATA-driven badges for all 17 database types in sidebar/toolbar
 - Status bar showing connection, execution time, row count
 - Dark theme with CSS variables
+- Transaction support (BEGIN/COMMIT/ROLLBACK) for PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift
+- Query plan visualization (EXPLAIN ANALYZE with tree view)
+- Bulk editing mode with undo/redo and visual change indicators
+- Table creation GUI with live DDL preview
+- Table alteration (add/drop columns) with DDL preview
+- Index management (create/drop indexes) with DDL preview
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -195,14 +204,14 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Table stats**: Show row count and size in tree tooltips
 - [x] **Refresh**: Manual and auto-refresh for schema tree
 
-### Phase 6: Advanced Database Operations
-- [ ] **Transaction support**: BEGIN/COMMIT/ROLLBACK controls in the UI
-- [ ] **Query plan visualization**: EXPLAIN ANALYZE with visual tree
-- [ ] **Bulk editing**: Edit multiple cells/rows before committing
-- [ ] **Undo/redo for data changes**: Track changes locally before flushing
-- [ ] **Table creation**: GUI for creating new tables
-- [ ] **Table alteration**: Add/modify/drop columns through UI
-- [ ] **Index management**: Create/drop indexes through UI
+### Phase 6: Advanced Database Operations ✅
+- [x] **Transaction support**: BEGIN/COMMIT/ROLLBACK controls in the UI
+- [x] **Query plan visualization**: EXPLAIN ANALYZE with visual tree
+- [x] **Bulk editing**: Edit multiple cells/rows before committing
+- [x] **Undo/redo for data changes**: Track changes locally before flushing
+- [x] **Table creation**: GUI for creating new tables
+- [x] **Table alteration**: Add/modify/drop columns through UI
+- [x] **Index management**: Create/drop indexes through UI
 
 ### Phase 7: UX Polish
 - [ ] **Connection groups/folders**: Organize connections

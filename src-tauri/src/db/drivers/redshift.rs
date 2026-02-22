@@ -121,4 +121,20 @@ impl SqlDriver for RedshiftDriver {
     async fn get_enums(&self, schema: &str) -> Result<Vec<EnumInfo>, AppError> {
         self.inner.get_enums(schema).await
     }
+
+    async fn begin_transaction(&self) -> Result<(), AppError> {
+        self.inner.begin_transaction().await
+    }
+
+    async fn commit_transaction(&self) -> Result<(), AppError> {
+        self.inner.commit_transaction().await
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), AppError> {
+        self.inner.rollback_transaction().await
+    }
+
+    async fn in_transaction(&self) -> Result<bool, AppError> {
+        self.inner.in_transaction().await
+    }
 }

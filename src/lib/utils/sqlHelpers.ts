@@ -162,3 +162,27 @@ export function parseErrorPosition(errorMessage: string, sql: string): { from: n
 
   return null;
 }
+
+/**
+ * Build a dialect-aware EXPLAIN query.
+ */
+export function buildExplainQuery(sql: string, dbType: DatabaseType): string {
+  const trimmed = sql.replace(/;\s*$/, '');
+  switch (dbType) {
+    case 'PostgreSQL':
+    case 'CockroachDB':
+    case 'Redshift':
+      return `EXPLAIN (ANALYZE, FORMAT JSON) ${trimmed}`;
+    case 'MySQL':
+    case 'MariaDB':
+      return `EXPLAIN FORMAT=JSON ${trimmed}`;
+    case 'SQLite':
+      return `EXPLAIN QUERY PLAN ${trimmed}`;
+    case 'MSSQL':
+      return `SET SHOWPLAN_TEXT ON;\n${trimmed};\nSET SHOWPLAN_TEXT OFF`;
+    case 'ClickHouse':
+      return `EXPLAIN ${trimmed}`;
+    default:
+      return `EXPLAIN ${trimmed}`;
+  }
+}

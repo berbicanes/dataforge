@@ -16,6 +16,8 @@
     table,
     sortColumns = [],
     filters = [],
+    modifiedCells,
+    deletedRows,
     onCellEdit,
     onCellSetNull,
     onSort,
@@ -29,6 +31,8 @@
     table?: string;
     sortColumns?: SortColumn[];
     filters?: FilterCondition[];
+    modifiedCells?: Map<number, Set<number>>;
+    deletedRows?: Set<number>;
     onCellEdit?: (rowIndex: number, colIndex: number, value: string) => void;
     onCellSetNull?: (rowIndex: number, colIndex: number) => void;
     onSort?: (sorts: SortColumn[]) => void;
@@ -385,6 +389,8 @@
               {editable}
               selected={selectedRows.has(absoluteIndex)}
               showCheckbox={true}
+              isDeleted={deletedRows?.has(absoluteIndex) ?? false}
+              modifiedCells={modifiedCells?.get(absoluteIndex)}
               onCellEdit={(colIndex, value) => handleCellEdit(i, colIndex, value)}
               onCellSetNull={(colIndex) => handleCellSetNull(i, colIndex)}
               onSelect={handleRowSelect}

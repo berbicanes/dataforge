@@ -4,16 +4,20 @@
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { schemaStore } from '$lib/stores/schema.svelte';
   import { savedQueriesStore } from '$lib/stores/savedQueries.svelte';
+  import { transactionStore } from '$lib/stores/transaction.svelte';
+  import { uiStore } from '$lib/stores/ui.svelte';
   import * as queryService from '$lib/services/queryService';
+  import * as tauri from '$lib/services/tauri';
   import type { Tab } from '$lib/types/tabs';
   import type { QueryResponse, SortColumn, CellValue } from '$lib/types/query';
   import { extractCellValue } from '$lib/utils/formatters';
-  import { buildSqlNamespace, splitStatements, parseErrorPosition } from '$lib/utils/sqlHelpers';
+  import { buildSqlNamespace, splitStatements, parseErrorPosition, buildExplainQuery } from '$lib/utils/sqlHelpers';
   import SqlEditor from '$lib/components/editor/SqlEditor.svelte';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
   import ExportMenu from '$lib/components/grid/ExportMenu.svelte';
   import QueryHistory from '$lib/components/editor/QueryHistory.svelte';
   import SavedQueries from '$lib/components/editor/SavedQueries.svelte';
+  import QueryPlanViewer from '$lib/components/editor/QueryPlanViewer.svelte';
 
   let { tab, onqueryresult }: {
     tab: Tab;
@@ -33,6 +37,13 @@
   let showSaved = $state(false);
   let saveName = $state('');
   let showSaveInput = $state(false);
+
+  // Transaction state
+  let inTransaction = $derived(transactionStore.isInTransaction(tab.connectionId));
+
+  // Explain / query plan
+  let showPlan = $state(false);
+  let planResult = $state<QueryResponse | null>(null);
 
   // Client-side sorting per result set
   let sortColumnsMap = $state<Record<number, SortColumn[]>>({});
@@ -225,6 +236,53 @@
     }
   }
 
+  async function handleBeginTransaction() {
+    try {
+      await tauri.beginTransaction(tab.connectionId);
+      transactionStore.setInTransaction(tab.connectionId, true);
+      uiStore.showSuccess('Transaction started');
+    } catch (err) {
+      uiStore.showError(`Failed to begin transaction: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleCommitTransaction() {
+    try {
+      await tauri.commitTransaction(tab.connectionId);
+      transactionStore.setInTransaction(tab.connectionId, false);
+      uiStore.showSuccess('Transaction committed');
+    } catch (err) {
+      uiStore.showError(`Failed to commit: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleRollbackTransaction() {
+    try {
+      await tauri.rollbackTransaction(tab.connectionId);
+      transactionStore.setInTransaction(tab.connectionId, false);
+      uiStore.showSuccess('Transaction rolled back');
+    } catch (err) {
+      uiStore.showError(`Failed to rollback: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function handleExplain() {
+    if (!sqlValue.trim()) return;
+    showPlan = false;
+    planResult = null;
+
+    try {
+      const explainSql = buildExplainQuery(sqlValue.trim(), dialect);
+      const response = await queryService.executeQuery(tab.connectionId, explainSql);
+      if (response) {
+        planResult = response;
+        showPlan = true;
+      }
+    } catch (err) {
+      uiStore.showError(`Explain failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   function toggleHistory() {
     showHistory = !showHistory;
     if (showHistory) showSaved = false;
@@ -314,6 +372,38 @@
         </svg>
         <span>Saved</span>
       </button>
+      <div class="toolbar-separator"></div>
+      <button
+        class="toolbar-btn"
+        onclick={handleExplain}
+        title="Explain Query Plan"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+        <span>Explain</span>
+      </button>
+      <div class="toolbar-separator"></div>
+      {#if inTransaction}
+        <span class="txn-badge">TXN</span>
+        <button
+          class="toolbar-btn txn-commit"
+          onclick={handleCommitTransaction}
+          title="Commit Transaction"
+        >Commit</button>
+        <button
+          class="toolbar-btn txn-rollback"
+          onclick={handleRollbackTransaction}
+          title="Rollback Transaction"
+        >Rollback</button>
+      {:else}
+        <button
+          class="toolbar-btn"
+          onclick={handleBeginTransaction}
+          title="Begin Transaction"
+        >Begin</button>
+      {/if}
     </div>
     <div class="toolbar-right">
       {#if results.length > 0}
@@ -394,6 +484,14 @@
             <span>{errorMessage}</span>
           </div>
         {/if}
+      </div>
+    {:else if showPlan && planResult}
+      <div class="plan-container">
+        <div class="plan-header">
+          <span>Query Plan</span>
+          <button class="toolbar-btn" onclick={() => { showPlan = false; planResult = null; }}>Close</button>
+        </div>
+        <QueryPlanViewer planData={planResult} {dialect} />
       </div>
     {:else}
       <div class="empty-state">
@@ -629,5 +727,53 @@
     height: 100%;
     gap: 4px;
     font-size: 13px;
+  }
+
+  .toolbar-separator {
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    margin: 0 4px;
+  }
+
+  .txn-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--warning, #fab387);
+    background: rgba(250, 179, 135, 0.15);
+    border: 1px solid rgba(250, 179, 135, 0.3);
+    border-radius: var(--radius-sm);
+  }
+
+  .txn-commit {
+    color: var(--success, #a6e3a1) !important;
+  }
+
+  .txn-rollback {
+    color: var(--error) !important;
+  }
+
+  .plan-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .plan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    flex-shrink: 0;
   }
 </style>

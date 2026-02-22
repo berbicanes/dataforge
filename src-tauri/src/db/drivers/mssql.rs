@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use bb8::Pool;
 use bb8_tiberius::ConnectionManager;
 use tiberius::{AuthMethod, Config, EncryptionLevel};
-
 use crate::db::traits::{DbDriver, SqlDriver};
 use crate::error::AppError;
 use crate::models::connection::{ConnectionConfig, DatabaseCategory};

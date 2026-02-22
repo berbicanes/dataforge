@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use async_trait::async_trait;
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use sqlx::Row;
+use sqlx::pool::PoolConnection;
+use sqlx::postgres::{PgPool, PgPoolOptions, Postgres};
+use sqlx::{Executor, Row};
+use tokio::sync::Mutex;
 
 use crate::db::traits::{DbDriver, SqlDriver};
 use crate::db::types::{pg_columns_to_defs, pg_row_to_cells};
@@ -17,6 +19,7 @@ use crate::models::schema::{
 
 pub struct PostgresDriver {
     pool: PgPool,
+    txn_conn: Mutex<Option<PoolConnection<Postgres>>>,
 }
 
 impl PostgresDriver {
@@ -28,18 +31,17 @@ impl PostgresDriver {
             .await
             .map_err(|e| AppError::Database(format!("Failed to connect to PostgreSQL: {}", e)))?;
 
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            txn_conn: Mutex::new(None),
+        })
     }
 
-}
-
-#[async_trait]
-impl DbDriver for PostgresDriver {
-    fn category(&self) -> DatabaseCategory {
-        DatabaseCategory::Relational
-    }
-
-    async fn execute_raw(&self, sql: &str) -> Result<QueryResponse, AppError> {
+    /// Execute a query using the transaction connection if active, otherwise pool.
+    async fn execute_on<'e, E: Executor<'e, Database = Postgres>>(
+        executor: E,
+        sql: &str,
+    ) -> Result<QueryResponse, AppError> {
         let start = Instant::now();
         let trimmed = sql.trim();
         let upper = trimmed.to_uppercase();
@@ -52,7 +54,7 @@ impl DbDriver for PostgresDriver {
             || upper.starts_with("VALUES");
 
         if is_select {
-            let rows = sqlx::query(trimmed).fetch_all(&self.pool).await?;
+            let rows = sqlx::query(trimmed).fetch_all(executor).await?;
             let elapsed = start.elapsed().as_millis() as u64;
 
             let columns = if rows.is_empty() {
@@ -72,7 +74,7 @@ impl DbDriver for PostgresDriver {
                 affected_rows: None,
             })
         } else {
-            let result = sqlx::query(trimmed).execute(&self.pool).await?;
+            let result = sqlx::query(trimmed).execute(executor).await?;
             let elapsed = start.elapsed().as_millis() as u64;
             let affected = result.rows_affected();
 
@@ -83,6 +85,23 @@ impl DbDriver for PostgresDriver {
                 execution_time_ms: elapsed,
                 affected_rows: Some(affected),
             })
+        }
+    }
+}
+
+#[async_trait]
+impl DbDriver for PostgresDriver {
+    fn category(&self) -> DatabaseCategory {
+        DatabaseCategory::Relational
+    }
+
+    async fn execute_raw(&self, sql: &str) -> Result<QueryResponse, AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            Self::execute_on(&mut **conn, sql).await
+        } else {
+            drop(guard);
+            Self::execute_on(&self.pool, sql).await
         }
     }
 
@@ -558,6 +577,44 @@ impl SqlDriver for PostgresDriver {
             .collect();
 
         Ok(sequences)
+    }
+
+    async fn begin_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if guard.is_some() {
+            return Err(AppError::Database("Transaction already active".to_string()));
+        }
+        let mut conn = self.pool.acquire().await?;
+        sqlx::query("BEGIN").execute(&mut *conn).await?;
+        *guard = Some(conn);
+        Ok(())
+    }
+
+    async fn commit_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("COMMIT").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("ROLLBACK").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn in_transaction(&self) -> Result<bool, AppError> {
+        let guard = self.txn_conn.lock().await;
+        Ok(guard.is_some())
     }
 
     async fn get_enums(&self, schema: &str) -> Result<Vec<EnumInfo>, AppError> {

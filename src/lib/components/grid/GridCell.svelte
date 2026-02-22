@@ -7,6 +7,7 @@
     column,
     width = 150,
     editable = false,
+    isModified = false,
     onEdit,
     onSetNull,
     onContextMenu,
@@ -15,6 +16,7 @@
     column: ColumnDef;
     width?: number;
     editable?: boolean;
+    isModified?: boolean;
     onEdit?: (value: string) => void;
     onSetNull?: () => void;
     onContextMenu?: (e: MouseEvent) => void;
@@ -75,6 +77,7 @@
   class:null-value={cellIsNull}
   class:numeric={isNumeric}
   class:bool-value={isBool}
+  class:modified={isModified}
   style="width: {width}px; min-width: {width}px; max-width: {width}px;"
   ondblclick={handleDblClick}
   oncontextmenu={handleContextMenu}
@@ -113,6 +116,11 @@
     font-size: 12px;
     font-family: var(--font-mono);
     gap: 4px;
+  }
+
+  .grid-cell.modified {
+    border-left: 3px solid var(--warning, #fab387);
+    padding-left: 7px;
   }
 
   .grid-cell.null-value .cell-text {

@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use async_trait::async_trait;
-use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
-use sqlx::Row;
+use sqlx::mysql::{MySql, MySqlPool, MySqlPoolOptions};
+use sqlx::pool::PoolConnection;
+use sqlx::{Executor, Row};
+use tokio::sync::Mutex;
 
 use crate::db::traits::{DbDriver, SqlDriver};
 use crate::db::types::{mysql_columns_to_defs, mysql_row_to_cells};
@@ -17,6 +19,7 @@ use crate::models::schema::{
 
 pub struct MySqlDriver {
     pool: MySqlPool,
+    txn_conn: Mutex<Option<PoolConnection<MySql>>>,
 }
 
 impl MySqlDriver {
@@ -28,18 +31,16 @@ impl MySqlDriver {
             .await
             .map_err(|e| AppError::Database(format!("Failed to connect to MySQL: {}", e)))?;
 
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            txn_conn: Mutex::new(None),
+        })
     }
 
-}
-
-#[async_trait]
-impl DbDriver for MySqlDriver {
-    fn category(&self) -> DatabaseCategory {
-        DatabaseCategory::Relational
-    }
-
-    async fn execute_raw(&self, sql: &str) -> Result<QueryResponse, AppError> {
+    async fn execute_on<'e, E: Executor<'e, Database = MySql>>(
+        executor: E,
+        sql: &str,
+    ) -> Result<QueryResponse, AppError> {
         let start = Instant::now();
         let trimmed = sql.trim();
         let upper = trimmed.to_uppercase();
@@ -53,7 +54,7 @@ impl DbDriver for MySqlDriver {
             || upper.starts_with("TABLE");
 
         if is_select {
-            let rows = sqlx::query(trimmed).fetch_all(&self.pool).await?;
+            let rows = sqlx::query(trimmed).fetch_all(executor).await?;
             let elapsed = start.elapsed().as_millis() as u64;
 
             let columns = if rows.is_empty() {
@@ -73,7 +74,7 @@ impl DbDriver for MySqlDriver {
                 affected_rows: None,
             })
         } else {
-            let result = sqlx::query(trimmed).execute(&self.pool).await?;
+            let result = sqlx::query(trimmed).execute(executor).await?;
             let elapsed = start.elapsed().as_millis() as u64;
             let affected = result.rows_affected();
 
@@ -84,6 +85,23 @@ impl DbDriver for MySqlDriver {
                 execution_time_ms: elapsed,
                 affected_rows: Some(affected),
             })
+        }
+    }
+}
+
+#[async_trait]
+impl DbDriver for MySqlDriver {
+    fn category(&self) -> DatabaseCategory {
+        DatabaseCategory::Relational
+    }
+
+    async fn execute_raw(&self, sql: &str) -> Result<QueryResponse, AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            Self::execute_on(&mut **conn, sql).await
+        } else {
+            drop(guard);
+            Self::execute_on(&self.pool, sql).await
         }
     }
 
@@ -491,6 +509,44 @@ impl SqlDriver for MySqlDriver {
                 })
             }
         }
+    }
+
+    async fn begin_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if guard.is_some() {
+            return Err(AppError::Database("Transaction already active".to_string()));
+        }
+        let mut conn = self.pool.acquire().await?;
+        sqlx::query("BEGIN").execute(&mut *conn).await?;
+        *guard = Some(conn);
+        Ok(())
+    }
+
+    async fn commit_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("COMMIT").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("ROLLBACK").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn in_transaction(&self) -> Result<bool, AppError> {
+        let guard = self.txn_conn.lock().await;
+        Ok(guard.is_some())
     }
 
     async fn get_routines(&self, schema: &str) -> Result<Vec<RoutineInfo>, AppError> {

@@ -10,6 +10,8 @@
     editable = false,
     selected = false,
     showCheckbox = false,
+    isDeleted = false,
+    modifiedCells,
     onCellEdit,
     onCellSetNull,
     onSelect,
@@ -22,6 +24,8 @@
     editable?: boolean;
     selected?: boolean;
     showCheckbox?: boolean;
+    isDeleted?: boolean;
+    modifiedCells?: Set<number>;
     onCellEdit?: (colIndex: number, value: string) => void;
     onCellSetNull?: (colIndex: number) => void;
     onSelect?: (rowIndex: number, e: MouseEvent) => void;
@@ -39,7 +43,7 @@
   }
 </script>
 
-<div class="grid-row" class:even={isEven} class:odd={!isEven} class:selected>
+<div class="grid-row" class:even={isEven} class:odd={!isEven} class:selected class:deleted={isDeleted}>
   {#if showCheckbox}
     <div class="checkbox-cell">
       <input
@@ -59,7 +63,8 @@
       value={cell}
       column={columns[colIndex]}
       width={w}
-      {editable}
+      editable={editable && !isDeleted}
+      isModified={modifiedCells?.has(colIndex) ?? false}
       onEdit={onCellEdit ? (val) => onCellEdit!(colIndex, val) : undefined}
       onSetNull={onCellSetNull ? () => onCellSetNull!(colIndex) : undefined}
       onContextMenu={(e) => handleRowContextMenu(colIndex, e)}
@@ -92,6 +97,12 @@
 
   .grid-row.selected:hover {
     background: rgba(137, 180, 250, 0.15) !important;
+  }
+
+  .grid-row.deleted {
+    opacity: 0.4;
+    text-decoration: line-through;
+    background: rgba(243, 139, 168, 0.05) !important;
   }
 
   .row-number-cell {

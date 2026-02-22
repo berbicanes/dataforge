@@ -1,8 +1,10 @@
 use std::time::Instant;
 
 use async_trait::async_trait;
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
-use sqlx::{Column, Row, TypeInfo, ValueRef};
+use sqlx::pool::PoolConnection;
+use sqlx::sqlite::{Sqlite, SqlitePool, SqlitePoolOptions};
+use sqlx::{Column, Executor, Row, TypeInfo, ValueRef};
+use tokio::sync::Mutex;
 
 use crate::db::traits::{DbDriver, SqlDriver};
 use crate::error::AppError;
@@ -14,6 +16,7 @@ use crate::models::schema::{
 
 pub struct SqliteDriver {
     pool: SqlitePool,
+    txn_conn: Mutex<Option<PoolConnection<Sqlite>>>,
 }
 
 impl SqliteDriver {
@@ -25,7 +28,59 @@ impl SqliteDriver {
             .await
             .map_err(|e| AppError::Database(format!("Failed to connect to SQLite: {}", e)))?;
 
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            txn_conn: Mutex::new(None),
+        })
+    }
+
+    async fn execute_on<'e, E: Executor<'e, Database = Sqlite>>(
+        executor: E,
+        sql: &str,
+    ) -> Result<QueryResponse, AppError> {
+        let start = Instant::now();
+        let trimmed = sql.trim();
+        let upper = trimmed.to_uppercase();
+
+        let is_select = upper.starts_with("SELECT")
+            || upper.starts_with("WITH")
+            || upper.starts_with("EXPLAIN")
+            || upper.starts_with("PRAGMA")
+            || upper.starts_with("VALUES");
+
+        if is_select {
+            let rows = sqlx::query(trimmed).fetch_all(executor).await?;
+            let elapsed = start.elapsed().as_millis() as u64;
+
+            let columns = if rows.is_empty() {
+                Vec::new()
+            } else {
+                sqlite_columns_to_defs(&rows[0])
+            };
+
+            let row_count = rows.len();
+            let data: Vec<Vec<_>> = rows.iter().map(|r| sqlite_row_to_cells(r)).collect();
+
+            Ok(QueryResponse {
+                columns,
+                rows: data,
+                row_count,
+                execution_time_ms: elapsed,
+                affected_rows: None,
+            })
+        } else {
+            let result = sqlx::query(trimmed).execute(executor).await?;
+            let elapsed = start.elapsed().as_millis() as u64;
+            let affected = result.rows_affected();
+
+            Ok(QueryResponse {
+                columns: Vec::new(),
+                rows: Vec::new(),
+                row_count: 0,
+                execution_time_ms: elapsed,
+                affected_rows: Some(affected),
+            })
+        }
     }
 }
 
@@ -104,48 +159,12 @@ impl DbDriver for SqliteDriver {
     }
 
     async fn execute_raw(&self, sql: &str) -> Result<QueryResponse, AppError> {
-        let start = Instant::now();
-        let trimmed = sql.trim();
-        let upper = trimmed.to_uppercase();
-
-        let is_select = upper.starts_with("SELECT")
-            || upper.starts_with("WITH")
-            || upper.starts_with("EXPLAIN")
-            || upper.starts_with("PRAGMA")
-            || upper.starts_with("VALUES");
-
-        if is_select {
-            let rows = sqlx::query(trimmed).fetch_all(&self.pool).await?;
-            let elapsed = start.elapsed().as_millis() as u64;
-
-            let columns = if rows.is_empty() {
-                Vec::new()
-            } else {
-                sqlite_columns_to_defs(&rows[0])
-            };
-
-            let row_count = rows.len();
-            let data: Vec<Vec<_>> = rows.iter().map(|r| sqlite_row_to_cells(r)).collect();
-
-            Ok(QueryResponse {
-                columns,
-                rows: data,
-                row_count,
-                execution_time_ms: elapsed,
-                affected_rows: None,
-            })
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            Self::execute_on(&mut **conn, sql).await
         } else {
-            let result = sqlx::query(trimmed).execute(&self.pool).await?;
-            let elapsed = start.elapsed().as_millis() as u64;
-            let affected = result.rows_affected();
-
-            Ok(QueryResponse {
-                columns: Vec::new(),
-                rows: Vec::new(),
-                row_count: 0,
-                execution_time_ms: elapsed,
-                affected_rows: Some(affected),
-            })
+            drop(guard);
+            Self::execute_on(&self.pool, sql).await
         }
     }
 
@@ -394,5 +413,43 @@ impl SqlDriver for SqliteDriver {
         }
 
         Ok(total_affected)
+    }
+
+    async fn begin_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if guard.is_some() {
+            return Err(AppError::Database("Transaction already active".to_string()));
+        }
+        let mut conn = self.pool.acquire().await?;
+        sqlx::query("BEGIN").execute(&mut *conn).await?;
+        *guard = Some(conn);
+        Ok(())
+    }
+
+    async fn commit_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("COMMIT").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn rollback_transaction(&self) -> Result<(), AppError> {
+        let mut guard = self.txn_conn.lock().await;
+        if let Some(ref mut conn) = *guard {
+            sqlx::query("ROLLBACK").execute(&mut **conn).await?;
+            *guard = None;
+            Ok(())
+        } else {
+            Err(AppError::Database("No active transaction".to_string()))
+        }
+    }
+
+    async fn in_transaction(&self) -> Result<bool, AppError> {
+        let guard = self.txn_conn.lock().await;
+        Ok(guard.is_some())
     }
 }

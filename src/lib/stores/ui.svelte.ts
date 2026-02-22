@@ -1,3 +1,25 @@
+import type { DatabaseType } from '$lib/types/connection';
+
+export interface CreateTableContext {
+  connectionId: string;
+  schema: string;
+  dbType: DatabaseType;
+}
+
+export interface AlterTableContext {
+  connectionId: string;
+  schema: string;
+  table: string;
+  dbType: DatabaseType;
+}
+
+export interface IndexModalContext {
+  connectionId: string;
+  schema: string;
+  table: string;
+  dbType: DatabaseType;
+}
+
 class UiStore {
   sidebarWidth = $state(260);
   showConnectionModal = $state(false);
@@ -8,6 +30,14 @@ class UiStore {
   loadingMessage = $state('');
   errorMessage = $state<string | null>(null);
   successMessage = $state<string | null>(null);
+
+  // Schema management modals
+  showCreateTableModal = $state(false);
+  createTableContext = $state<CreateTableContext | null>(null);
+  showAlterTableModal = $state(false);
+  alterTableContext = $state<AlterTableContext | null>(null);
+  showIndexModal = $state(false);
+  indexModalContext = $state<IndexModalContext | null>(null);
 
   openConnectionModal() {
     this.showConnectionModal = true;

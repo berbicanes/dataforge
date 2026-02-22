@@ -120,6 +120,19 @@ export async function getEnums(connectionId: string, schema: string): Promise<En
   return invoke<EnumInfo[]>('get_enums', { connectionId, schema });
 }
 
+// Transaction management
+export async function beginTransaction(connectionId: string): Promise<void> {
+  return invoke<void>('begin_transaction', { connectionId });
+}
+
+export async function commitTransaction(connectionId: string): Promise<void> {
+  return invoke<void>('commit_transaction', { connectionId });
+}
+
+export async function rollbackTransaction(connectionId: string): Promise<void> {
+  return invoke<void>('rollback_transaction', { connectionId });
+}
+
 // Document operations (MongoDB, DynamoDB)
 export async function insertDocument(connectionId: string, container: string, item: string, document: string): Promise<string> {
   return invoke<string>('insert_document', { connectionId, container, item, document });

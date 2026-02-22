@@ -115,6 +115,32 @@ pub trait SqlDriver: DbDriver {
     async fn get_enums(&self, _schema: &str) -> Result<Vec<EnumInfo>, AppError> {
         Ok(Vec::new())
     }
+
+    /// Begin an explicit transaction. Holds a connection from the pool.
+    async fn begin_transaction(&self) -> Result<(), AppError> {
+        Err(AppError::UnsupportedOperation(
+            "Transactions not supported by this driver".to_string(),
+        ))
+    }
+
+    /// Commit the current transaction.
+    async fn commit_transaction(&self) -> Result<(), AppError> {
+        Err(AppError::UnsupportedOperation(
+            "Transactions not supported by this driver".to_string(),
+        ))
+    }
+
+    /// Rollback the current transaction.
+    async fn rollback_transaction(&self) -> Result<(), AppError> {
+        Err(AppError::UnsupportedOperation(
+            "Transactions not supported by this driver".to_string(),
+        ))
+    }
+
+    /// Check if a transaction is currently active.
+    async fn in_transaction(&self) -> Result<bool, AppError> {
+        Ok(false)
+    }
 }
 
 /// Trait for document databases (MongoDB, DynamoDB).

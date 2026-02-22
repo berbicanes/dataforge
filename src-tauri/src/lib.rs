@@ -57,6 +57,10 @@ pub fn run() {
             commands::graph::get_relationship_types,
             commands::graph::get_node_properties,
             commands::graph::get_nodes,
+            // Transaction management
+            commands::transaction::begin_transaction,
+            commands::transaction::commit_transaction,
+            commands::transaction::rollback_transaction,
             // Export/Import
             commands::export::export_to_csv,
             commands::export::export_to_json,
