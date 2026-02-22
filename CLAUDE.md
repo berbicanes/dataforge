@@ -152,22 +152,22 @@ npm run check            # TypeScript/Svelte type checking
 
 ## Roadmap — Next Steps
 
-### Phase 1: Security & Stability (Critical)
-- [ ] **Parameterized queries**: Replace string concatenation in update_cell/insert_row/delete_rows with sqlx bind parameters
-- [ ] **Query timeout**: Add configurable timeout to prevent runaway queries
-- [ ] **Connection health checks**: Validate connections before reuse, auto-reconnect on failure
-- [ ] **Error handling improvements**: Structured errors with context, query details in error messages, user-friendly messages on frontend
-- [ ] **Logging**: Add log crate usage throughout Rust backend
+### Phase 1: Security & Stability (Critical) ✅
+- [x] **Parameterized queries**: Replace string concatenation in update_cell/insert_row/delete_rows with sqlx bind parameters
+- [x] **Query timeout**: Add configurable timeout to prevent runaway queries
+- [x] **Connection health checks**: Validate connections before reuse, auto-reconnect on failure
+- [x] **Error handling improvements**: Structured errors with context, query details in error messages, user-friendly messages on frontend
+- [x] **Logging**: Add log crate usage throughout Rust backend
 
-### Phase 2: Core Data Grid Features
-- [ ] **Column sorting**: Click column headers to sort ASC/DESC, multi-column sort with Shift+click
-- [ ] **Column filtering**: Filter bar per column (text contains, equals, greater than, etc.)
-- [ ] **Column resizing**: Drag column borders to resize
-- [ ] **Column reordering**: Drag and drop columns
-- [ ] **Row selection**: Checkbox column for selecting rows, Shift+click range select
-- [ ] **NULL handling**: Dedicated "Set NULL" option in cell editor
-- [ ] **Copy/paste**: Copy cells/rows to clipboard, paste support
-- [ ] **Cell context menu**: Copy, paste, set NULL, copy as INSERT, filter by value
+### Phase 2: Core Data Grid Features ✅
+- [x] **Column sorting**: Click column headers to sort ASC/DESC, multi-column sort with Shift+click
+- [x] **Column filtering**: Filter bar per column (text contains, equals, greater than, etc.)
+- [x] **Column resizing**: Drag column borders to resize
+- [x] **Column reordering**: Drag and drop columns
+- [x] **Row selection**: Checkbox column for selecting rows, Shift+click range select
+- [x] **NULL handling**: Dedicated "Set NULL" option in cell editor
+- [x] **Copy/paste**: Copy cells/rows to clipboard, paste support
+- [x] **Cell context menu**: Copy, paste, set NULL, copy as INSERT, filter by value
 
 ### Phase 3: Query Editor Enhancements
 - [ ] **Schema-aware autocomplete**: Feed table/column names from schema cache into CodeMirror completions
