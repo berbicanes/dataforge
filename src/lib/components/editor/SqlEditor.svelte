@@ -12,6 +12,7 @@
   import { StateField, StateEffect, RangeSet } from '@codemirror/state';
   import { format as formatSqlString } from 'sql-formatter';
   import type { DatabaseType } from '$lib/types/connection';
+  import { settingsStore } from '$lib/stores/settings.svelte';
 
   let {
     value = $bindable(''),
@@ -33,9 +34,11 @@
 
   // Compartments for dynamic reconfiguration
   const sqlCompartment = new Compartment();
+  const themeCompartment = new Compartment();
   const errorCompartment = new Compartment();
 
-  const appTheme = EditorView.theme({
+  // Base app theme shared by both dark and light — uses CSS variables
+  const appThemeBase = {
     '&': {
       height: '100%',
       fontSize: '13px',
@@ -55,22 +58,9 @@
     '.cm-activeLineGutter': {
       backgroundColor: 'var(--bg-tertiary)',
     },
-    '.cm-activeLine': {
-      backgroundColor: 'rgba(69, 69, 90, 0.3)',
-    },
     '.cm-cursor': {
       borderLeftColor: 'var(--accent)',
       borderLeftWidth: '2px',
-    },
-    '.cm-selectionBackground': {
-      backgroundColor: 'rgba(122, 162, 247, 0.2) !important',
-    },
-    '&.cm-focused .cm-selectionBackground': {
-      backgroundColor: 'rgba(122, 162, 247, 0.3) !important',
-    },
-    '.cm-matchingBracket': {
-      backgroundColor: 'rgba(122, 162, 247, 0.25)',
-      outline: '1px solid rgba(122, 162, 247, 0.5)',
     },
     '.cm-scroller': {
       overflow: 'auto',
@@ -103,6 +93,26 @@
       color: 'var(--text-primary)',
       border: '1px solid var(--border-color)',
     },
+    '.cm-foldGutter span': {
+      color: 'var(--text-muted)',
+    },
+  };
+
+  const darkTheme = EditorView.theme({
+    ...appThemeBase,
+    '.cm-activeLine': {
+      backgroundColor: 'rgba(69, 69, 90, 0.3)',
+    },
+    '.cm-selectionBackground': {
+      backgroundColor: 'rgba(122, 162, 247, 0.2) !important',
+    },
+    '&.cm-focused .cm-selectionBackground': {
+      backgroundColor: 'rgba(122, 162, 247, 0.3) !important',
+    },
+    '.cm-matchingBracket': {
+      backgroundColor: 'rgba(122, 162, 247, 0.25)',
+      outline: '1px solid rgba(122, 162, 247, 0.5)',
+    },
     '.cm-searchMatch': {
       backgroundColor: 'rgba(249, 226, 175, 0.2)',
       outline: '1px solid rgba(249, 226, 175, 0.4)',
@@ -110,10 +120,37 @@
     '.cm-searchMatch.cm-searchMatch-selected': {
       backgroundColor: 'rgba(249, 226, 175, 0.4)',
     },
-    '.cm-foldGutter span': {
-      color: 'var(--text-muted)',
-    },
   }, { dark: true });
+
+  const lightTheme = EditorView.theme({
+    ...appThemeBase,
+    '.cm-activeLine': {
+      backgroundColor: 'rgba(172, 176, 190, 0.2)',
+    },
+    '.cm-selectionBackground': {
+      backgroundColor: 'rgba(30, 102, 245, 0.15) !important',
+    },
+    '&.cm-focused .cm-selectionBackground': {
+      backgroundColor: 'rgba(30, 102, 245, 0.25) !important',
+    },
+    '.cm-matchingBracket': {
+      backgroundColor: 'rgba(30, 102, 245, 0.2)',
+      outline: '1px solid rgba(30, 102, 245, 0.4)',
+    },
+    '.cm-searchMatch': {
+      backgroundColor: 'rgba(223, 142, 29, 0.2)',
+      outline: '1px solid rgba(223, 142, 29, 0.4)',
+    },
+    '.cm-searchMatch.cm-searchMatch-selected': {
+      backgroundColor: 'rgba(223, 142, 29, 0.4)',
+    },
+  }, { dark: false });
+
+  function getEditorTheme() {
+    return settingsStore.theme === 'dark'
+      ? [oneDark, darkTheme]
+      : [syntaxHighlighting(defaultHighlightStyle, { fallback: true }), lightTheme];
+  }
 
   // Error highlight decoration
   const errorMark = Decoration.mark({ class: 'cm-error-highlight' });
@@ -267,8 +304,7 @@
         ]),
         sqlCompartment.of(getSqlLanguage(schemaNamespace)),
         errorField,
-        oneDark,
-        appTheme,
+        themeCompartment.of(getEditorTheme()),
         updateListener,
       ],
     });
@@ -277,6 +313,16 @@
       state,
       parent: editorContainer,
     });
+  });
+
+  // Hot-swap theme when settings change
+  $effect(() => {
+    const _theme = settingsStore.theme;
+    if (view) {
+      view.dispatch({
+        effects: themeCompartment.reconfigure(getEditorTheme()),
+      });
+    }
   });
 
   // Hot-swap SQL language when schema namespace changes

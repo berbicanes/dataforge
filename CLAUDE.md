@@ -137,12 +137,20 @@ npm run check            # TypeScript/Svelte type checking
 - DB_METADATA-driven badges for all 17 database types in sidebar/toolbar
 - Status bar showing connection, execution time, row count
 - Dark theme with CSS variables
+- Light theme (Catppuccin Latte) with theme toggle and persistent preference
 - Transaction support (BEGIN/COMMIT/ROLLBACK) for PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift
 - Query plan visualization (EXPLAIN ANALYZE with tree view)
 - Bulk editing mode with undo/redo and visual change indicators
 - Table creation GUI with live DDL preview
 - Table alteration (add/drop columns) with DDL preview
 - Index management (create/drop indexes) with DDL preview
+- Connection groups/folders with collapsible sidebar sections
+- Configurable keyboard shortcuts with shortcuts panel (Ctrl+K)
+- Tab drag-and-drop reordering with visual drop indicator
+- Tab context menu (Close, Close Others, Split Right)
+- Split panes — view two tabs side by side with draggable divider
+- Command palette (Ctrl+P) — fuzzy search connections, tables, queries, actions
+- Sidebar collapse/expand (Ctrl+B)
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -213,13 +221,13 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Table alteration**: Add/modify/drop columns through UI
 - [x] **Index management**: Create/drop indexes through UI
 
-### Phase 7: UX Polish
-- [ ] **Connection groups/folders**: Organize connections
-- [ ] **Light theme**: Add light theme option with theme toggle
-- [ ] **Keyboard shortcuts panel**: Show all shortcuts, allow customization
-- [ ] **Tab drag-and-drop**: Reorder tabs by dragging
-- [ ] **Split panes**: View multiple tabs side by side
-- [ ] **Global search**: Ctrl+P to search tables, queries, connections
+### Phase 7: UX Polish ✅
+- [x] **Connection groups/folders**: Organize connections
+- [x] **Light theme**: Add light theme option with theme toggle
+- [x] **Keyboard shortcuts panel**: Show all shortcuts, allow customization
+- [x] **Tab drag-and-drop**: Reorder tabs by dragging
+- [x] **Split panes**: View multiple tabs side by side
+- [x] **Global search**: Ctrl+P to search tables, queries, connections
 
 ### Phase 8: Complete Stub Databases
 - [ ] **Oracle**: Implement full driver using oracle crate (requires Oracle Instant Client)

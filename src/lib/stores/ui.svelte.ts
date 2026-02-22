@@ -31,6 +31,11 @@ class UiStore {
   errorMessage = $state<string | null>(null);
   successMessage = $state<string | null>(null);
 
+  // Phase 7 — UX modals & sidebar
+  showShortcutsModal = $state(false);
+  showCommandPalette = $state(false);
+  sidebarCollapsed = $state(false);
+
   // Schema management modals
   showCreateTableModal = $state(false);
   createTableContext = $state<CreateTableContext | null>(null);

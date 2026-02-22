@@ -5,6 +5,15 @@ class TabStore {
   tabs = $state<Tab[]>([]);
   activeTabId = $state<string | null>(null);
 
+  // Split pane state
+  splitMode = $state(false);
+  leftPaneTabs = $state<string[]>([]);
+  rightPaneTabs = $state<string[]>([]);
+  activeLeftTabId = $state<string | null>(null);
+  activeRightTabId = $state<string | null>(null);
+  activePaneId = $state<'left' | 'right'>('left');
+  splitRatio = $state(0.5);
+
   get activeTab(): Tab | undefined {
     return this.tabs.find(t => t.id === this.activeTabId);
   }
@@ -18,6 +27,7 @@ class TabStore {
       );
       if (existing) {
         this.activeTabId = existing.id;
+        if (this.splitMode) this._focusTabInPane(existing.id);
         return existing.id;
       }
     }
@@ -30,6 +40,7 @@ class TabStore {
       );
       if (existing) {
         this.activeTabId = existing.id;
+        if (this.splitMode) this._focusTabInPane(existing.id);
         return existing.id;
       }
     }
@@ -38,15 +49,53 @@ class TabStore {
     const newTab: Tab = { ...tab, id };
     this.tabs.push(newTab);
     this.activeTabId = id;
+
+    // In split mode, add to active pane
+    if (this.splitMode) {
+      if (this.activePaneId === 'right') {
+        this.rightPaneTabs = [...this.rightPaneTabs, id];
+        this.activeRightTabId = id;
+      } else {
+        this.leftPaneTabs = [...this.leftPaneTabs, id];
+        this.activeLeftTabId = id;
+      }
+    }
+
     return id;
   }
 
   closeTab(id: string) {
     const idx = this.tabs.findIndex(t => t.id === id);
     if (idx < 0) return;
+
+    // Handle split mode pane removal
+    if (this.splitMode) {
+      const inLeft = this.leftPaneTabs.includes(id);
+      const inRight = this.rightPaneTabs.includes(id);
+
+      if (inLeft) {
+        this.leftPaneTabs = this.leftPaneTabs.filter(tid => tid !== id);
+        if (this.activeLeftTabId === id) {
+          this.activeLeftTabId = this.leftPaneTabs[0] ?? null;
+        }
+        // Close split if pane is empty
+        if (this.leftPaneTabs.length === 0) {
+          this.closeSplit();
+        }
+      }
+      if (inRight) {
+        this.rightPaneTabs = this.rightPaneTabs.filter(tid => tid !== id);
+        if (this.activeRightTabId === id) {
+          this.activeRightTabId = this.rightPaneTabs[0] ?? null;
+        }
+        if (this.rightPaneTabs.length === 0) {
+          this.closeSplit();
+        }
+      }
+    }
+
     this.tabs.splice(idx, 1);
     if (this.activeTabId === id) {
-      // Activate adjacent tab
       if (this.tabs.length > 0) {
         const newIdx = Math.min(idx, this.tabs.length - 1);
         this.activeTabId = this.tabs[newIdx].id;
@@ -58,6 +107,7 @@ class TabStore {
 
   setActive(id: string) {
     this.activeTabId = id;
+    if (this.splitMode) this._focusTabInPane(id);
   }
 
   updateTabSql(id: string, sql: string) {
@@ -73,6 +123,83 @@ class TabStore {
       connectionId,
       sql: ''
     });
+  }
+
+  // --- Drag and drop ---
+  moveTab(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    const [tab] = this.tabs.splice(fromIndex, 1);
+    this.tabs.splice(toIndex, 0, tab);
+    this.tabs = [...this.tabs]; // trigger reactivity
+  }
+
+  // --- Split panes ---
+  splitTab(tabId: string) {
+    if (this.splitMode) return; // already split
+    if (this.tabs.length < 1) return;
+
+    this.splitMode = true;
+    this.splitRatio = 0.5;
+    this.activePaneId = 'right';
+
+    // All existing tabs go to left pane, the target tab goes to right pane
+    const otherTabs = this.tabs.filter(t => t.id !== tabId).map(t => t.id);
+    this.leftPaneTabs = otherTabs.length > 0 ? otherTabs : [];
+    this.rightPaneTabs = [tabId];
+    this.activeLeftTabId = otherTabs[0] ?? null;
+    this.activeRightTabId = tabId;
+    this.activeTabId = tabId;
+
+    // If only one tab existed, the left pane will be empty — handle by keeping tab in both
+    if (otherTabs.length === 0) {
+      // Need at least 2 tabs for split — cancel
+      this.splitMode = false;
+      this.leftPaneTabs = [];
+      this.rightPaneTabs = [];
+    }
+  }
+
+  closeSplit() {
+    this.splitMode = false;
+    // Keep the active tab from whichever pane was active
+    const activeId = this.activePaneId === 'left' ? this.activeLeftTabId : this.activeRightTabId;
+    if (activeId) this.activeTabId = activeId;
+    this.leftPaneTabs = [];
+    this.rightPaneTabs = [];
+    this.activeLeftTabId = null;
+    this.activeRightTabId = null;
+  }
+
+  moveTabToPane(tabId: string, targetPane: 'left' | 'right') {
+    if (!this.splitMode) return;
+
+    // Remove from current pane
+    this.leftPaneTabs = this.leftPaneTabs.filter(id => id !== tabId);
+    this.rightPaneTabs = this.rightPaneTabs.filter(id => id !== tabId);
+
+    // Add to target pane
+    if (targetPane === 'left') {
+      this.leftPaneTabs = [...this.leftPaneTabs, tabId];
+      this.activeLeftTabId = tabId;
+    } else {
+      this.rightPaneTabs = [...this.rightPaneTabs, tabId];
+      this.activeRightTabId = tabId;
+    }
+
+    // Close split if a pane becomes empty
+    if (this.leftPaneTabs.length === 0 || this.rightPaneTabs.length === 0) {
+      this.closeSplit();
+    }
+  }
+
+  private _focusTabInPane(id: string) {
+    if (this.leftPaneTabs.includes(id)) {
+      this.activeLeftTabId = id;
+      this.activePaneId = 'left';
+    } else if (this.rightPaneTabs.includes(id)) {
+      this.activeRightTabId = id;
+      this.activePaneId = 'right';
+    }
   }
 }
 

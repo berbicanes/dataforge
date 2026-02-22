@@ -603,3 +603,171 @@ a:hover {
     opacity: 1;
   }
 }
+
+/* ──────────────────────────────────────────────
+   Light Theme (Catppuccin Latte)
+   ────────────────────────────────────────────── */
+[data-theme="light"] {
+  /* Background colors */
+  --bg-primary: #eff1f5;
+  --bg-secondary: #e6e9ef;
+  --bg-tertiary: #dce0e8;
+  --bg-hover: #ccd0da;
+  --bg-active: #bcc0cc;
+
+  /* Text colors */
+  --text-primary: #4c4f69;
+  --text-secondary: #6c6f85;
+  --text-muted: #9ca0b0;
+
+  /* Border */
+  --border-color: #ccd0da;
+
+  /* Accent & status colors */
+  --accent: #1e66f5;
+  --accent-hover: #1a5be0;
+  --error: #d20f39;
+  --success: #40a02b;
+  --warning: #df8e1d;
+
+  /* Shadows — lighter for light theme */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Light-mode btn-primary needs white text */
+[data-theme="light"] .btn-primary {
+  color: #fff;
+}
+
+/* Light-mode badge overrides for readability */
+[data-theme="light"] .badge-pg {
+  background: rgba(30, 102, 245, 0.12);
+  color: #1e66f5;
+}
+
+[data-theme="light"] .badge-mysql {
+  background: rgba(223, 142, 29, 0.12);
+  color: #df8e1d;
+}
+
+[data-theme="light"] .badge-mariadb {
+  background: rgba(136, 57, 239, 0.12);
+  color: #8839ef;
+}
+
+[data-theme="light"] .badge-sqlite {
+  background: rgba(23, 146, 153, 0.12);
+  color: #179299;
+}
+
+[data-theme="light"] .badge-mssql {
+  background: rgba(210, 15, 57, 0.12);
+  color: #d20f39;
+}
+
+[data-theme="light"] .badge-oracle {
+  background: rgba(254, 100, 11, 0.12);
+  color: #fe640b;
+}
+
+[data-theme="light"] .badge-cockroach {
+  background: rgba(64, 160, 43, 0.12);
+  color: #40a02b;
+}
+
+[data-theme="light"] .badge-redshift {
+  background: rgba(210, 15, 57, 0.12);
+  color: #d20f39;
+}
+
+[data-theme="light"] .badge-clickhouse {
+  background: rgba(223, 142, 29, 0.12);
+  color: #df8e1d;
+}
+
+[data-theme="light"] .badge-snowflake {
+  background: rgba(4, 165, 229, 0.12);
+  color: #04a5e5;
+}
+
+[data-theme="light"] .badge-bigquery {
+  background: rgba(32, 159, 181, 0.12);
+  color: #209fb5;
+}
+
+[data-theme="light"] .badge-mongodb {
+  background: rgba(64, 160, 43, 0.12);
+  color: #40a02b;
+}
+
+[data-theme="light"] .badge-cassandra {
+  background: rgba(30, 102, 245, 0.12);
+  color: #1e66f5;
+}
+
+[data-theme="light"] .badge-scylladb {
+  background: rgba(254, 100, 11, 0.12);
+  color: #fe640b;
+}
+
+[data-theme="light"] .badge-redis {
+  background: rgba(210, 15, 57, 0.12);
+  color: #d20f39;
+}
+
+[data-theme="light"] .badge-neo4j {
+  background: rgba(23, 146, 153, 0.12);
+  color: #179299;
+}
+
+[data-theme="light"] .badge-dynamodb {
+  background: rgba(223, 142, 29, 0.12);
+  color: #df8e1d;
+}
+
+/* Light-mode status dot */
+[data-theme="light"] .status-dot.connected {
+  background: #40a02b;
+  box-shadow: 0 0 4px rgba(64, 160, 43, 0.5);
+}
+
+/* Light-mode scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--bg-active);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Light-mode modal overlay */
+[data-theme="light"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Light-mode toast */
+[data-theme="light"] .toast-error {
+  background: rgba(210, 15, 57, 0.1);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+[data-theme="light"] .toast-success {
+  background: rgba(64, 160, 43, 0.1);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+/* Light-mode kbd */
+[data-theme="light"] .kbd {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  box-shadow: 0 1px 0 var(--border-color);
+}

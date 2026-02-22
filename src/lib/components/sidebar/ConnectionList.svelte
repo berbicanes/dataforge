@@ -4,8 +4,24 @@
   import * as connectionService from '$lib/services/connectionService';
   import { DB_METADATA } from '$lib/types/database';
   import type { ConnectionState } from '$lib/types/connection';
+  import ConnectionGroup from './ConnectionGroup.svelte';
 
   let contextMenu = $state<{ x: number; y: number; connection: ConnectionState } | null>(null);
+  let groupInput = $state<{ connId: string; value: string } | null>(null);
+
+  let expandedGroups = $state(new Set<string>());
+  let editingConnectionId = $state<string | null>(null);
+
+  // Derived: ungrouped connections, then groups
+  let ungrouped = $derived(connectionStore.getConnectionsByGroup(null));
+  let groups = $derived(connectionStore.groups);
+
+  function toggleGroup(name: string) {
+    const next = new Set(expandedGroups);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    expandedGroups = next;
+  }
 
   function handleClick(conn: ConnectionState) {
     connectionStore.setActive(conn.config.id);
@@ -62,7 +78,37 @@
     }
   }
 
-  let editingConnectionId = $state<string | null>(null);
+  function ctxMoveToGroup() {
+    if (contextMenu) {
+      groupInput = { connId: contextMenu.connection.config.id, value: contextMenu.connection.config.group ?? '' };
+      closeContextMenu();
+    }
+  }
+
+  function ctxRemoveFromGroup() {
+    if (contextMenu) {
+      const config = { ...contextMenu.connection.config, group: undefined };
+      connectionStore.updateConnection(config);
+      closeContextMenu();
+    }
+  }
+
+  function submitGroupInput(e: KeyboardEvent) {
+    if (e.key === 'Enter' && groupInput) {
+      const config = connectionStore.connections.find(c => c.config.id === groupInput!.connId)?.config;
+      if (config) {
+        const updated = { ...config, group: groupInput.value.trim() || undefined };
+        connectionStore.updateConnection(updated);
+        // Auto-expand the new group
+        if (updated.group) {
+          expandedGroups = new Set([...expandedGroups, updated.group]);
+        }
+      }
+      groupInput = null;
+    } else if (e.key === 'Escape') {
+      groupInput = null;
+    }
+  }
 </script>
 
 <svelte:window onclick={closeContextMenu} />
@@ -73,7 +119,8 @@
       <span class="text-muted">No connections yet</span>
     </div>
   {:else}
-    {#each connectionStore.connections as conn}
+    <!-- Ungrouped connections -->
+    {#each ungrouped as conn}
       {@const meta = DB_METADATA[conn.config.db_type]}
       <button
         class="connection-item"
@@ -89,8 +136,60 @@
         </span>
       </button>
     {/each}
+
+    <!-- Grouped connections -->
+    {#each groups as group}
+      {@const groupConns = connectionStore.getConnectionsByGroup(group)}
+      <ConnectionGroup
+        name={group}
+        count={groupConns.length}
+        expanded={expandedGroups.has(group)}
+        ontoggle={() => toggleGroup(group)}
+      >
+        {#each groupConns as conn}
+          {@const meta = DB_METADATA[conn.config.db_type]}
+          <button
+            class="connection-item"
+            class:active={conn.config.id === connectionStore.activeConnectionId}
+            onclick={() => handleClick(conn)}
+            ondblclick={() => handleDblClick(conn)}
+            oncontextmenu={(e) => handleContextMenu(e, conn)}
+          >
+            <span class="status-dot {conn.status}"></span>
+            <span class="conn-name truncate">{conn.config.name}</span>
+            <span class="badge {meta.badgeClass}">
+              {meta.badge}
+            </span>
+          </button>
+        {/each}
+      </ConnectionGroup>
+    {/each}
   {/if}
 </div>
+
+{#if groupInput}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="group-input-overlay" onclick={() => { groupInput = null; }} onkeydown={(e) => { if (e.key === 'Escape') groupInput = null; }}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="group-input-card" onclick={(e) => e.stopPropagation()}>
+      <label class="group-input-label" for="group-name-input">Move to Group</label>
+      <input
+        id="group-name-input"
+        type="text"
+        bind:value={groupInput.value}
+        onkeydown={submitGroupInput}
+        placeholder="Group name"
+        list="existing-groups"
+      />
+      <datalist id="existing-groups">
+        {#each groups as g}
+          <option value={g}></option>
+        {/each}
+      </datalist>
+      <div class="group-input-hint">Press Enter to confirm, Escape to cancel</div>
+    </div>
+  </div>
+{/if}
 
 {#if contextMenu}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -121,6 +220,21 @@
       </svg>
       Edit
     </button>
+    <div class="context-divider"></div>
+    <button class="context-item" onclick={ctxMoveToGroup}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M2 3h5l1 1h6v9H2V3z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+      </svg>
+      Move to Group
+    </button>
+    {#if contextMenu.connection.config.group}
+      <button class="context-item" onclick={ctxRemoveFromGroup}>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Remove from Group
+      </button>
+    {/if}
     <div class="context-divider"></div>
     <button class="context-item danger" onclick={ctxDelete}>
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -214,5 +328,53 @@
     height: 1px;
     background: var(--border-color);
     margin: 4px 0;
+  }
+
+  .group-input-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 600;
+  }
+
+  .group-input-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 16px;
+    min-width: 280px;
+  }
+
+  .group-input-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .group-input-card input {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    outline: none;
+  }
+
+  .group-input-card input:focus {
+    border-color: var(--accent);
+  }
+
+  .group-input-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
   }
 </style>

@@ -16,6 +16,21 @@ class ConnectionStore {
     return this.connections.filter(c => c.status === 'connected');
   }
 
+  /** Sorted unique group names */
+  get groups(): string[] {
+    const names = new Set<string>();
+    for (const c of this.connections) {
+      if (c.config.group) names.add(c.config.group);
+    }
+    return Array.from(names).sort();
+  }
+
+  getConnectionsByGroup(group: string | null): ConnectionState[] {
+    return this.connections.filter(c =>
+      group === null ? !c.config.group : c.config.group === group
+    );
+  }
+
   async init() {
     this.store = await load('connections.json');
     const saved = await this.store.get<ConnectionConfig[]>('connections');

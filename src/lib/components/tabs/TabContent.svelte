@@ -6,11 +6,18 @@
   import KeyValueTab from './KeyValueTab.svelte';
   import GraphTab from './GraphTab.svelte';
 
-  let { onqueryresult }: {
+  let { onqueryresult, paneId }: {
     onqueryresult?: (detail: { executionTime: number; rowCount: number }) => void;
+    paneId?: 'left' | 'right';
   } = $props();
 
-  let activeTab = $derived(tabStore.activeTab);
+  let activeTab = $derived.by(() => {
+    if (tabStore.splitMode && paneId) {
+      const activeId = paneId === 'left' ? tabStore.activeLeftTabId : tabStore.activeRightTabId;
+      return tabStore.tabs.find(t => t.id === activeId);
+    }
+    return tabStore.activeTab;
+  });
 </script>
 
 <div class="tab-content">

@@ -2,6 +2,7 @@
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { tabStore } from '$lib/stores/tabs.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import { DB_METADATA } from '$lib/types/database';
 
   let showConnectionDropdown = $state(false);
@@ -66,6 +67,35 @@
   </div>
 
   <div class="toolbar-right">
+    <button
+      class="btn toolbar-btn"
+      onclick={() => settingsStore.toggleTheme()}
+      title="Toggle theme (Ctrl+Shift+T)"
+    >
+      {#if settingsStore.theme === 'dark'}
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      {:else}
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M13.5 9.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      {/if}
+    </button>
+
+    <button
+      class="btn toolbar-btn"
+      onclick={() => { uiStore.showShortcutsModal = true; }}
+      title="Keyboard shortcuts (Ctrl+K)"
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M4 7h1M7 7h2M11 7h1M4 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="toolbar-divider"></div>
     <div class="connection-selector">
       <button
         class="btn selector-btn"

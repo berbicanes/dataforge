@@ -3,10 +3,32 @@
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
 
+  let { paneId }: { paneId?: 'left' | 'right' } = $props();
+
   let scrollContainer: HTMLDivElement;
+  let draggedTabId = $state<string | null>(null);
+  let dropTargetIndex = $state<number | null>(null);
+  let contextMenu = $state<{ x: number; y: number; tabId: string } | null>(null);
+
+  // Filter tabs by pane if in split mode
+  let visibleTabs = $derived.by(() => {
+    if (tabStore.splitMode && paneId) {
+      const paneTabIds = paneId === 'left' ? tabStore.leftPaneTabs : tabStore.rightPaneTabs;
+      return tabStore.tabs.filter(t => paneTabIds.includes(t.id));
+    }
+    return tabStore.tabs;
+  });
+
+  let currentActiveTabId = $derived.by(() => {
+    if (tabStore.splitMode && paneId) {
+      return paneId === 'left' ? tabStore.activeLeftTabId : tabStore.activeRightTabId;
+    }
+    return tabStore.activeTabId;
+  });
 
   function handleTabClick(id: string) {
     tabStore.setActive(id);
+    if (paneId) tabStore.activePaneId = paneId;
   }
 
   function handleTabClose(e: MouseEvent, id: string) {
@@ -15,6 +37,7 @@
   }
 
   function handleNewTab() {
+    if (paneId) tabStore.activePaneId = paneId;
     if (connectionStore.activeConnectionId) {
       tabStore.newQueryTab(connectionStore.activeConnectionId);
     } else {
@@ -32,17 +55,100 @@
   function getTabIcon(type: string): string {
     return type === 'query' ? '\u{2318}' : '\u{1F5C3}';
   }
+
+  // --- Drag and Drop ---
+  function handleDragStart(e: DragEvent, tabId: string) {
+    draggedTabId = tabId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', tabId);
+    }
+  }
+
+  function handleDragOver(e: DragEvent, index: number) {
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    dropTargetIndex = index;
+  }
+
+  function handleDragLeave() {
+    dropTargetIndex = null;
+  }
+
+  function handleDrop(e: DragEvent, targetIndex: number) {
+    e.preventDefault();
+    if (!draggedTabId) return;
+
+    const tabs = visibleTabs;
+    const fromIndex = tabStore.tabs.findIndex(t => t.id === draggedTabId);
+    const targetTab = tabs[targetIndex];
+    const toIndex = targetTab ? tabStore.tabs.findIndex(t => t.id === targetTab.id) : tabStore.tabs.length - 1;
+
+    if (fromIndex >= 0 && toIndex >= 0) {
+      tabStore.moveTab(fromIndex, toIndex);
+    }
+
+    draggedTabId = null;
+    dropTargetIndex = null;
+  }
+
+  function handleDragEnd() {
+    draggedTabId = null;
+    dropTargetIndex = null;
+  }
+
+  // --- Context Menu ---
+  function handleContextMenu(e: MouseEvent, tabId: string) {
+    e.preventDefault();
+    contextMenu = { x: e.clientX, y: e.clientY, tabId };
+  }
+
+  function closeContextMenu() {
+    contextMenu = null;
+  }
+
+  function ctxClose() {
+    if (contextMenu) {
+      tabStore.closeTab(contextMenu.tabId);
+      closeContextMenu();
+    }
+  }
+
+  function ctxCloseOthers() {
+    if (!contextMenu) return;
+    const keepId = contextMenu.tabId;
+    const toClose = visibleTabs.filter(t => t.id !== keepId).map(t => t.id);
+    for (const id of toClose) tabStore.closeTab(id);
+    closeContextMenu();
+  }
+
+  function ctxSplitRight() {
+    if (!contextMenu) return;
+    tabStore.splitTab(contextMenu.tabId);
+    closeContextMenu();
+  }
 </script>
+
+<svelte:window onclick={closeContextMenu} />
 
 <div class="tab-bar">
   <div class="tabs-scroll" bind:this={scrollContainer}>
-    {#each tabStore.tabs as tab}
+    {#each visibleTabs as tab, i}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="tab"
-        class:active={tab.id === tabStore.activeTabId}
+        class:active={tab.id === currentActiveTabId}
+        class:drag-over={dropTargetIndex === i && draggedTabId !== tab.id}
+        class:dragging={draggedTabId === tab.id}
+        draggable="true"
         onclick={() => handleTabClick(tab.id)}
         onauxclick={(e) => handleMiddleClick(e, tab.id)}
+        oncontextmenu={(e) => handleContextMenu(e, tab.id)}
+        ondragstart={(e) => handleDragStart(e, tab.id)}
+        ondragover={(e) => handleDragOver(e, i)}
+        ondragleave={handleDragLeave}
+        ondrop={(e) => handleDrop(e, i)}
+        ondragend={handleDragEnd}
         onkeydown={(e) => { if (e.key === 'Enter') handleTabClick(tab.id); }}
         role="tab"
         tabindex="0"
@@ -69,6 +175,23 @@
     </svg>
   </button>
 </div>
+
+{#if contextMenu}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="context-menu"
+    style="left: {contextMenu.x}px; top: {contextMenu.y}px"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => { if (e.key === 'Escape') closeContextMenu(); }}
+  >
+    <button class="context-item" onclick={ctxClose}>Close</button>
+    <button class="context-item" onclick={ctxCloseOthers}>Close Others</button>
+    {#if !tabStore.splitMode && tabStore.tabs.length >= 2}
+      <div class="context-divider"></div>
+      <button class="context-item" onclick={ctxSplitRight}>Split Right</button>
+    {/if}
+  </div>
+{/if}
 
 <style>
   .tab-bar {
@@ -110,6 +233,7 @@
     max-width: 200px;
     position: relative;
     flex-shrink: 0;
+    user-select: none;
   }
 
   .tab:hover {
@@ -130,6 +254,22 @@
     right: 0;
     height: 2px;
     background: var(--accent);
+  }
+
+  .tab.dragging {
+    opacity: 0.4;
+  }
+
+  .tab.drag-over::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    z-index: 5;
   }
 
   .tab-icon {
@@ -189,5 +329,41 @@
   .new-tab-btn:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
+  }
+
+  .context-menu {
+    position: fixed;
+    z-index: 500;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 4px 0;
+    min-width: 140px;
+  }
+
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-primary);
+    text-align: left;
+    transition: background var(--transition-fast);
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+
+  .context-item:hover {
+    background: var(--bg-hover);
+  }
+
+  .context-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 0;
   }
 </style>

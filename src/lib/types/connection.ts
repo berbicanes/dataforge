@@ -55,6 +55,8 @@ export interface ConnectionConfig {
   cloud_auth?: CloudAuth;
   // AWS
   aws_region?: string;
+  // Connection group
+  group?: string;
 }
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';

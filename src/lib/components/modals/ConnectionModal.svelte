@@ -32,6 +32,8 @@
   let awsRegion = $state('us-east-1');
   let awsAccessKey = $state('');
   let awsSecretKey = $state('');
+  // Group
+  let group = $state('');
 
   let isTesting = $state(false);
   let testResult = $state<'success' | 'fail' | null>(null);
@@ -55,6 +57,8 @@
       db_type: dbType,
       use_ssl: useSsl,
     };
+
+    if (group.trim()) config.group = group.trim();
 
     if (meta.requiresHost) {
       config.host = host;
@@ -196,6 +200,22 @@
           bind:value={name}
           placeholder="My Database"
         />
+      </div>
+
+      <div class="form-group">
+        <label for="conn-group">Group (optional)</label>
+        <input
+          id="conn-group"
+          type="text"
+          bind:value={group}
+          placeholder="e.g. Production, Staging"
+          list="conn-groups"
+        />
+        <datalist id="conn-groups">
+          {#each connectionStore.groups as g}
+            <option value={g}></option>
+          {/each}
+        </datalist>
       </div>
 
       <div class="form-row">
