@@ -97,6 +97,18 @@
 
     <button
       class="btn toolbar-btn"
+      onclick={() => { uiStore.showAboutModal = true; }}
+      title="About DataForge"
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M8 7v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="8" cy="5" r="0.7" fill="currentColor"/>
+      </svg>
+    </button>
+
+    <button
+      class="btn toolbar-btn"
       onclick={() => { uiStore.showSettingsModal = true; }}
       title="Settings"
     >

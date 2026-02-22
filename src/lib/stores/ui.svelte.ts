@@ -39,6 +39,9 @@ class UiStore {
   // Phase 10 — Settings
   showSettingsModal = $state(false);
 
+  // Phase 13 — About
+  showAboutModal = $state(false);
+
   // Schema management modals
   showCreateTableModal = $state(false);
   createTableContext = $state<CreateTableContext | null>(null);

@@ -2,6 +2,7 @@
   import { tabStore } from '$lib/stores/tabs.svelte';
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
 
   let { paneId }: { paneId?: 'left' | 'right' } = $props();
 
@@ -38,7 +39,11 @@
 
   function handleTabClose(e: MouseEvent, id: string) {
     e.stopPropagation();
-    tabStore.closeTab(id);
+    if (settingsStore.confirmBeforeDelete && tabStore.hasContent(id)) {
+      uiStore.confirm('This tab has unsaved content. Close it anyway?', () => tabStore.closeTab(id));
+    } else {
+      tabStore.closeTab(id);
+    }
   }
 
   function handleNewTab() {
@@ -53,7 +58,11 @@
   function handleMiddleClick(e: MouseEvent, id: string) {
     if (e.button === 1) {
       e.preventDefault();
-      tabStore.closeTab(id);
+      if (settingsStore.confirmBeforeDelete && tabStore.hasContent(id)) {
+        uiStore.confirm('This tab has unsaved content. Close it anyway?', () => tabStore.closeTab(id));
+      } else {
+        tabStore.closeTab(id);
+      }
     }
   }
 
@@ -121,12 +130,23 @@
 
   function ctxCloseOthers() {
     if (!contextMenu) return;
-    tabStore.closeOthers(contextMenu.tabId);
+    const keepId = contextMenu.tabId;
+    const hasUnsaved = tabStore.tabs.some(t => t.id !== keepId && !t.pinned && tabStore.hasContent(t.id));
+    if (settingsStore.confirmBeforeDelete && hasUnsaved) {
+      uiStore.confirm('Some tabs have unsaved content. Close them anyway?', () => tabStore.closeOthers(keepId));
+    } else {
+      tabStore.closeOthers(keepId);
+    }
     closeContextMenu();
   }
 
   function ctxCloseAll() {
-    tabStore.closeAll();
+    const hasUnsaved = tabStore.tabs.some(t => !t.pinned && tabStore.hasContent(t.id));
+    if (settingsStore.confirmBeforeDelete && hasUnsaved) {
+      uiStore.confirm('Some tabs have unsaved content. Close all anyway?', () => tabStore.closeAll());
+    } else {
+      tabStore.closeAll();
+    }
     closeContextMenu();
   }
 

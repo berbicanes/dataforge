@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import type { Tab } from '$lib/types/tabs';
   import * as kvService from '$lib/services/keyvalueService';
+  import { uiStore } from '$lib/stores/ui.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import KeyValueViewer from '$lib/components/viewers/KeyValueViewer.svelte';
 
   let { tab }: { tab: Tab } = $props();
@@ -56,11 +58,19 @@
 
   async function handleDeleteKey() {
     if (!selectedKey) return;
-    const deleted = await kvService.deleteKeys(tab.connectionId, [selectedKey]);
-    if (deleted > 0) {
-      selectedKey = null;
-      selectedValue = null;
-      await loadKeys();
+    const key = selectedKey;
+    const doDelete = async () => {
+      const deleted = await kvService.deleteKeys(tab.connectionId, [key]);
+      if (deleted > 0) {
+        selectedKey = null;
+        selectedValue = null;
+        await loadKeys();
+      }
+    };
+    if (settingsStore.confirmBeforeDelete) {
+      uiStore.confirm(`Delete key "${key}"?`, doDelete);
+    } else {
+      await doDelete();
     }
   }
 

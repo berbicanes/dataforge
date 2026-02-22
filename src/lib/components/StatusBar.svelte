@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { formatDuration, formatRowCount } from '$lib/utils/formatters';
@@ -8,6 +9,8 @@
     rowCount: number | null;
   } = $props();
 
+  let appVersion = $state('');
+
   let activeConnection = $derived(connectionStore.activeConnection);
   let statusClass = $derived(activeConnection?.status ?? 'disconnected');
   let connectionLabel = $derived(
@@ -15,6 +18,15 @@
       ? `${activeConnection.config.name} (${activeConnection.config.host}:${activeConnection.config.port})`
       : 'No connection'
   );
+
+  onMount(async () => {
+    try {
+      const { getVersion } = await import('@tauri-apps/api/app');
+      appVersion = await getVersion();
+    } catch {
+      appVersion = '0.2.0';
+    }
+  });
 </script>
 
 <div class="statusbar">
@@ -42,6 +54,9 @@
       <span class="row-count">
         {formatRowCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
       </span>
+    {/if}
+    {#if appVersion}
+      <span class="version-label">v{appVersion}</span>
     {/if}
   </div>
 </div>
@@ -117,5 +132,13 @@
     color: var(--text-muted);
     font-family: var(--font-mono);
     font-size: 10px;
+  }
+
+  .version-label {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: 4px;
   }
 </style>

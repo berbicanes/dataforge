@@ -10,6 +10,20 @@ class SettingsStore {
   gridFontSize = $state(12);
   defaultPageSize = $state(100);
   confirmBeforeDelete = $state(true);
+
+  // Window state persistence
+  sidebarWidth = $state(260);
+  sidebarCollapsed = $state(false);
+  windowMaximized = $state(false);
+  windowWidth = $state(1280);
+  windowHeight = $state(800);
+  windowX = $state<number | null>(null);
+  windowY = $state<number | null>(null);
+
+  // Session restore
+  restoreSession = $state(true);
+  lastActiveConnectionId = $state<string | null>(null);
+
   private store: Store | null = null;
   private initialized = false;
 
@@ -33,6 +47,28 @@ class SettingsStore {
     const savedConfirm = await this.store.get<boolean>('confirmBeforeDelete');
     if (savedConfirm !== null && savedConfirm !== undefined) this.confirmBeforeDelete = savedConfirm;
 
+    // Window state
+    const savedSidebarWidth = await this.store.get<number>('sidebarWidth');
+    if (savedSidebarWidth) this.sidebarWidth = savedSidebarWidth;
+    const savedSidebarCollapsed = await this.store.get<boolean>('sidebarCollapsed');
+    if (savedSidebarCollapsed !== null && savedSidebarCollapsed !== undefined) this.sidebarCollapsed = savedSidebarCollapsed;
+    const savedWindowMaximized = await this.store.get<boolean>('windowMaximized');
+    if (savedWindowMaximized !== null && savedWindowMaximized !== undefined) this.windowMaximized = savedWindowMaximized;
+    const savedWindowWidth = await this.store.get<number>('windowWidth');
+    if (savedWindowWidth) this.windowWidth = savedWindowWidth;
+    const savedWindowHeight = await this.store.get<number>('windowHeight');
+    if (savedWindowHeight) this.windowHeight = savedWindowHeight;
+    const savedWindowX = await this.store.get<number | null>('windowX');
+    if (savedWindowX !== undefined) this.windowX = savedWindowX;
+    const savedWindowY = await this.store.get<number | null>('windowY');
+    if (savedWindowY !== undefined) this.windowY = savedWindowY;
+
+    // Session restore
+    const savedRestoreSession = await this.store.get<boolean>('restoreSession');
+    if (savedRestoreSession !== null && savedRestoreSession !== undefined) this.restoreSession = savedRestoreSession;
+    const savedLastConnId = await this.store.get<string | null>('lastActiveConnectionId');
+    if (savedLastConnId !== undefined) this.lastActiveConnectionId = savedLastConnId;
+
     this.applyTheme();
     this.applyFontSizes();
     this.initialized = true;
@@ -46,6 +82,15 @@ class SettingsStore {
       await this.store.set('gridFontSize', this.gridFontSize);
       await this.store.set('defaultPageSize', this.defaultPageSize);
       await this.store.set('confirmBeforeDelete', this.confirmBeforeDelete);
+      await this.store.set('sidebarWidth', this.sidebarWidth);
+      await this.store.set('sidebarCollapsed', this.sidebarCollapsed);
+      await this.store.set('windowMaximized', this.windowMaximized);
+      await this.store.set('windowWidth', this.windowWidth);
+      await this.store.set('windowHeight', this.windowHeight);
+      await this.store.set('windowX', this.windowX);
+      await this.store.set('windowY', this.windowY);
+      await this.store.set('restoreSession', this.restoreSession);
+      await this.store.set('lastActiveConnectionId', this.lastActiveConnectionId);
       await this.store.save();
     }
   }
@@ -88,6 +133,31 @@ class SettingsStore {
 
   setConfirmBeforeDelete(value: boolean) {
     this.confirmBeforeDelete = value;
+    this.persist();
+  }
+
+  setWindowState(w: number, h: number, x: number, y: number, maximized: boolean) {
+    this.windowWidth = w;
+    this.windowHeight = h;
+    this.windowX = x;
+    this.windowY = y;
+    this.windowMaximized = maximized;
+    this.persist();
+  }
+
+  setSidebarLayout(width: number, collapsed: boolean) {
+    this.sidebarWidth = width;
+    this.sidebarCollapsed = collapsed;
+    this.persist();
+  }
+
+  setRestoreSession(value: boolean) {
+    this.restoreSession = value;
+    this.persist();
+  }
+
+  setLastActiveConnectionId(id: string | null) {
+    this.lastActiveConnectionId = id;
     this.persist();
   }
 

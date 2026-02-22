@@ -1,7 +1,9 @@
 <script lang="ts">
   import { v4 as uuidv4 } from 'uuid';
   import { connectionStore } from '$lib/stores/connections.svelte';
+  import { tabStore } from '$lib/stores/tabs.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import * as connectionService from '$lib/services/connectionService';
   import { DB_METADATA } from '$lib/types/database';
   import type { ConnectionState } from '$lib/types/connection';
@@ -54,7 +56,16 @@
 
   function ctxDisconnect() {
     if (contextMenu) {
-      connectionService.disconnect(contextMenu.connection.config.id);
+      const connId = contextMenu.connection.config.id;
+      const connTabs = tabStore.tabsForConnection(connId);
+      if (settingsStore.confirmBeforeDelete && connTabs.length > 0) {
+        uiStore.confirm(
+          `Disconnect? ${connTabs.length} open tab${connTabs.length > 1 ? 's' : ''} will lose their connection.`,
+          () => connectionService.disconnect(connId)
+        );
+      } else {
+        connectionService.disconnect(connId);
+      }
       closeContextMenu();
     }
   }

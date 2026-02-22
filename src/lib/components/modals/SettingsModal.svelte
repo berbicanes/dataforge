@@ -122,6 +122,27 @@
           </div>
         </div>
       </div>
+
+      <div class="settings-section">
+        <h3 class="section-title">Session</h3>
+
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="label-text">Restore Tabs on Startup</span>
+            <span class="label-hint">Reopen last active tabs and reconnect on launch</span>
+          </div>
+          <div class="setting-control">
+            <label class="toggle">
+              <input
+                type="checkbox"
+                checked={settingsStore.restoreSession}
+                onchange={(e) => settingsStore.setRestoreSession(e.currentTarget.checked)}
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

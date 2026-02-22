@@ -159,6 +159,11 @@ npm run check            # TypeScript/Svelte type checking
 - DDL viewer — dedicated sub-tab showing CREATE TABLE DDL with copy button
 - Type-aware cell editing — boolean checkbox toggle, JSON/long-text textarea, NULL pill badges
 - Query cancellation — cancel running queries with Cancel button, backend tokio::select! with oneshot channels
+- Window state persistence — remembers window size, position, sidebar width/collapsed, maximized state across restarts
+- Session restore — reopens last active tabs and auto-reconnects on launch, configurable in settings
+- Confirmation dialogs — guards tab close, close all/others, disconnect with open tabs, destructive SQL (DROP/TRUNCATE/DELETE), Redis key deletion
+- Empty states & onboarding — first-launch welcome screen with CTA and DB badges, improved no-tabs empty state
+- About screen — version info, license, tech stack, GitHub link, version displayed in status bar
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -262,13 +267,13 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Query cancellation backend**: Cancellation tokens using tokio::select! with oneshot channels, QueryCancelled error variant
 - [x] **Cancel button UI**: Show Cancel button next to spinner during query execution, call cancel_query command on click
 
-### Phase 13: Production Readiness
+### Phase 13: Production Readiness (partial) ✅
 - [ ] **Auto-update mechanism**: Integrate @tauri-apps/plugin-updater for in-app update notifications and automatic downloads
-- [ ] **Window state persistence**: Remember window size, position, sidebar width, and open tabs on restart using plugin-store
-- [ ] **Session restore**: Reopen last active tabs and connection on app launch
-- [ ] **Confirmation dialogs for destructive actions**: Confirm before DROP TABLE, bulk DELETE rows, disconnect with unsaved changes, close tabs with unsaved queries
-- [ ] **Empty states & onboarding**: First-launch experience with "Connect your first database" prompt, empty state illustrations for no connections/no tabs/no results
-- [ ] **About screen**: Version info, license, links to repo/docs/support
+- [x] **Window state persistence**: Remember window size, position, sidebar width, and open tabs on restart using plugin-store
+- [x] **Session restore**: Reopen last active tabs and connection on app launch
+- [x] **Confirmation dialogs for destructive actions**: Confirm before DROP TABLE, bulk DELETE rows, disconnect with unsaved changes, close tabs with unsaved queries
+- [x] **Empty states & onboarding**: First-launch experience with "Connect your first database" prompt, empty state illustrations for no connections/no tabs/no results
+- [x] **About screen**: Version info, license, links to repo/docs/support
 - [ ] **App icon & branding**: Production app icon, splash screen, proper window title
 
 ### Phase 14: Secure Connections

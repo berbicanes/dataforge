@@ -1,9 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
+import { load, type Store } from '@tauri-apps/plugin-store';
 import type { Tab, TabType } from '$lib/types/tabs';
 
 class TabStore {
   tabs = $state<Tab[]>([]);
   activeTabId = $state<string | null>(null);
+
+  // Persistence
+  private store: Store | null = null;
+  private initialized = false;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Split pane state
   splitMode = $state(false);
@@ -16,6 +22,45 @@ class TabStore {
 
   get activeTab(): Tab | undefined {
     return this.tabs.find(t => t.id === this.activeTabId);
+  }
+
+  async init() {
+    if (this.initialized) return;
+    this.store = await load('session.json');
+    const savedTabs = await this.store.get<Tab[]>('tabs');
+    if (savedTabs && savedTabs.length > 0) {
+      this.tabs = savedTabs;
+    }
+    const savedActiveId = await this.store.get<string | null>('activeTabId');
+    if (savedActiveId && this.tabs.some(t => t.id === savedActiveId)) {
+      this.activeTabId = savedActiveId;
+    } else if (this.tabs.length > 0) {
+      this.activeTabId = this.tabs[0].id;
+    }
+    this.initialized = true;
+  }
+
+  private async persist() {
+    if (!this.store) return;
+    await this.store.set('tabs', this.tabs.map(t => ({ ...t })));
+    await this.store.set('activeTabId', this.activeTabId);
+    await this.store.save();
+  }
+
+  private debouncedPersist() {
+    if (this.persistTimer) clearTimeout(this.persistTimer);
+    this.persistTimer = setTimeout(() => this.persist(), 500);
+  }
+
+  /** Returns true if the query tab with the given id has non-empty SQL */
+  hasContent(id: string): boolean {
+    const tab = this.tabs.find(t => t.id === id);
+    return tab?.type === 'query' && !!tab.sql?.trim();
+  }
+
+  /** Returns all tabs for a given connection */
+  tabsForConnection(connectionId: string): Tab[] {
+    return this.tabs.filter(t => t.connectionId === connectionId);
   }
 
   /** Sorted view: pinned tabs first, then unpinned, preserving relative order within each group */
@@ -68,6 +113,7 @@ class TabStore {
       }
     }
 
+    this.persist();
     return id;
   }
 
@@ -115,6 +161,7 @@ class TabStore {
         this.activeTabId = null;
       }
     }
+    this.persist();
   }
 
   closeAll() {
@@ -132,6 +179,7 @@ class TabStore {
     if (tab) {
       tab.pinned = !tab.pinned;
       this.tabs = [...this.tabs]; // trigger reactivity
+      this.persist();
     }
   }
 
@@ -159,17 +207,22 @@ class TabStore {
       }
     }
 
+    this.persist();
     return newId;
   }
 
   setActive(id: string) {
     this.activeTabId = id;
     if (this.splitMode) this._focusTabInPane(id);
+    this.persist();
   }
 
   updateTabSql(id: string, sql: string) {
     const tab = this.tabs.find(t => t.id === id);
-    if (tab) tab.sql = sql;
+    if (tab) {
+      tab.sql = sql;
+      this.debouncedPersist();
+    }
   }
 
   newQueryTab(connectionId: string) {
@@ -188,6 +241,7 @@ class TabStore {
     const [tab] = this.tabs.splice(fromIndex, 1);
     this.tabs.splice(toIndex, 0, tab);
     this.tabs = [...this.tabs]; // trigger reactivity
+    this.persist();
   }
 
   // --- Split panes ---

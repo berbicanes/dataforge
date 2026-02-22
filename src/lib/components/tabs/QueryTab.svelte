@@ -6,6 +6,7 @@
   import { savedQueriesStore } from '$lib/stores/savedQueries.svelte';
   import { transactionStore } from '$lib/stores/transaction.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
   import * as queryService from '$lib/services/queryService';
   import * as tauri from '$lib/services/tauri';
   import type { Tab } from '$lib/types/tabs';
@@ -99,7 +100,26 @@
     return rows;
   }
 
+  const DESTRUCTIVE_SQL_PATTERN = /\b(DROP|TRUNCATE|DELETE\s+FROM)\b/i;
+
   async function executeQuery() {
+    if (isExecuting) return;
+    if (!sqlValue.trim()) return;
+
+    // Check for destructive SQL and confirm if needed
+    if (settingsStore.confirmBeforeDelete && DESTRUCTIVE_SQL_PATTERN.test(sqlValue)) {
+      return new Promise<void>((resolve) => {
+        uiStore.confirm(
+          'This query contains a destructive operation (DROP, TRUNCATE, or DELETE). Execute anyway?',
+          () => { doExecuteQuery(); resolve(); }
+        );
+      });
+    }
+
+    return doExecuteQuery();
+  }
+
+  async function doExecuteQuery() {
     if (isExecuting) return;
     if (!sqlValue.trim()) return;
 

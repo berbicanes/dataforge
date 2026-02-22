@@ -6,6 +6,7 @@
   import { queryHistoryStore } from '$lib/stores/queryHistory.svelte';
   import { savedQueriesStore } from '$lib/stores/savedQueries.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import * as connectionService from '$lib/services/connectionService';
   import * as schemaService from '$lib/services/schemaService';
   import { DB_METADATA } from '$lib/types/database';
   import Toolbar from '$lib/components/Toolbar.svelte';
@@ -14,6 +15,7 @@
   import TabContent from '$lib/components/tabs/TabContent.svelte';
   import SplitPane from '$lib/components/tabs/SplitPane.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import WelcomeScreen from '$lib/components/WelcomeScreen.svelte';
   import ConnectionModal from '$lib/components/modals/ConnectionModal.svelte';
   import ConfirmDialog from '$lib/components/modals/ConfirmDialog.svelte';
   import CreateTableModal from '$lib/components/modals/CreateTableModal.svelte';
@@ -22,15 +24,75 @@
   import ShortcutsModal from '$lib/components/modals/ShortcutsModal.svelte';
   import CommandPalette from '$lib/components/modals/CommandPalette.svelte';
   import SettingsModal from '$lib/components/modals/SettingsModal.svelte';
+  import AboutModal from '$lib/components/modals/AboutModal.svelte';
 
   let lastExecutionTime = $state<number | null>(null);
   let lastRowCount = $state<number | null>(null);
 
-  onMount(() => {
-    connectionStore.init();
+  onMount(async () => {
+    await connectionStore.init();
     queryHistoryStore.init();
     savedQueriesStore.init();
-    settingsStore.init();
+    await settingsStore.init();
+
+    // Restore sidebar layout from persisted settings
+    uiStore.sidebarWidth = settingsStore.sidebarWidth;
+    uiStore.sidebarCollapsed = settingsStore.sidebarCollapsed;
+
+    // Restore window geometry
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const { LogicalSize, LogicalPosition } = await import('@tauri-apps/api/dpi');
+      const appWindow = getCurrentWindow();
+
+      if (settingsStore.windowMaximized) {
+        await appWindow.maximize();
+      } else {
+        if (settingsStore.windowWidth && settingsStore.windowHeight) {
+          await appWindow.setSize(new LogicalSize(settingsStore.windowWidth, settingsStore.windowHeight));
+        }
+        if (settingsStore.windowX !== null && settingsStore.windowY !== null) {
+          await appWindow.setPosition(new LogicalPosition(settingsStore.windowX, settingsStore.windowY));
+        }
+      }
+
+      // Save state on close
+      appWindow.onCloseRequested(async () => {
+        try {
+          const isMaximized = await appWindow.isMaximized();
+          if (!isMaximized) {
+            const size = await appWindow.innerSize();
+            const pos = await appWindow.outerPosition();
+            settingsStore.setWindowState(size.width, size.height, pos.x, pos.y, false);
+          } else {
+            settingsStore.setWindowState(
+              settingsStore.windowWidth, settingsStore.windowHeight,
+              settingsStore.windowX ?? 0, settingsStore.windowY ?? 0, true
+            );
+          }
+          settingsStore.setSidebarLayout(uiStore.sidebarWidth, uiStore.sidebarCollapsed);
+        } catch {
+          // Best-effort save
+        }
+      });
+    } catch {
+      // Not running in Tauri (e.g. dev server in browser)
+    }
+
+    // Session restore: reopen tabs and reconnect
+    if (settingsStore.restoreSession) {
+      await tabStore.init();
+
+      if (settingsStore.lastActiveConnectionId) {
+        const conn = connectionStore.connections.find(
+          c => c.config.id === settingsStore.lastActiveConnectionId
+        );
+        if (conn && conn.status !== 'connected') {
+          // Silently attempt reconnection
+          connectionService.connect(conn.config).catch(() => {});
+        }
+      }
+    }
   });
 
   function handleQueryResult(detail: { executionTime: number; rowCount: number }) {
@@ -64,7 +126,14 @@
         break;
       }
       case 'closeTab':
-        if (tabStore.activeTabId) tabStore.closeTab(tabStore.activeTabId);
+        if (tabStore.activeTabId) {
+          const id = tabStore.activeTabId;
+          if (settingsStore.confirmBeforeDelete && tabStore.hasContent(id)) {
+            uiStore.confirm('This tab has unsaved content. Close it anyway?', () => tabStore.closeTab(id));
+          } else {
+            tabStore.closeTab(id);
+          }
+        }
         break;
       case 'nextTab': {
         const tabs = tabStore.tabs;
@@ -144,16 +213,7 @@
         </div>
       {/if}
     {:else}
-      <div class="empty-state">
-        <div class="icon">&#x1F5C4;</div>
-        <div class="message">Open a connection and start querying</div>
-        <div class="hint">
-          Use the sidebar to manage connections, or press
-          <span class="kbd">Ctrl+N</span> to create a new query tab
-          &middot;
-          <span class="kbd">Ctrl+P</span> to search
-        </div>
-      </div>
+      <WelcomeScreen onAddConnection={() => uiStore.openConnectionModal()} />
     {/if}
   </div>
 
@@ -192,6 +252,10 @@
 
 {#if uiStore.showSettingsModal}
   <SettingsModal />
+{/if}
+
+{#if uiStore.showAboutModal}
+  <AboutModal />
 {/if}
 
 {#if uiStore.errorMessage}
@@ -252,29 +316,4 @@
     grid-area: statusbar;
   }
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 8px;
-    user-select: none;
-  }
-
-  .empty-state .icon {
-    font-size: 48px;
-    opacity: 0.3;
-  }
-
-  .empty-state .message {
-    font-size: 14px;
-    color: var(--text-muted);
-  }
-
-  .empty-state .hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    opacity: 0.7;
-  }
 </style>
