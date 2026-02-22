@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod models;
 
+use db::cancel::CancellationRegistry;
 use db::pool::PoolManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(PoolManager::new())
+        .manage(CancellationRegistry::new())
         .invoke_handler(tauri::generate_handler![
             // Connection management
             commands::connection::connect_db,
@@ -20,6 +22,7 @@ pub fn run() {
             commands::connection::ping_connection,
             // Query execution
             commands::query::execute_query,
+            commands::query::cancel_query,
             // Generic schema browsing (all databases)
             commands::schema::get_database_category,
             commands::schema::get_containers,

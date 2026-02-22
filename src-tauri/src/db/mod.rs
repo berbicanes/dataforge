@@ -1,3 +1,4 @@
+pub mod cancel;
 pub mod drivers;
 pub mod handle;
 pub mod pool;

@@ -28,6 +28,7 @@
   let sqlValue = $state(getInitialSql());
   let results = $state<QueryResponse[]>([]);
   let isExecuting = $state(false);
+  let activeQueryId = $state<string | null>(null);
   let errorMessage = $state<string | null>(null);
   let errorStatementIndex = $state<number | null>(null);
   let errorRange = $state<{ from: number; to: number } | null>(null);
@@ -102,6 +103,8 @@
     if (isExecuting) return;
     if (!sqlValue.trim()) return;
 
+    const queryId = crypto.randomUUID();
+    activeQueryId = queryId;
     isExecuting = true;
     errorMessage = null;
     errorStatementIndex = null;
@@ -113,7 +116,7 @@
 
       if (statements.length <= 1) {
         // Single statement — use simple execution
-        const response = await queryService.executeQuery(tab.connectionId, sqlValue);
+        const response = await queryService.executeQuery(tab.connectionId, sqlValue, queryId);
         if (response) {
           results = [response];
           sortColumnsMap = {};
@@ -124,7 +127,7 @@
         }
       } else {
         // Multi-statement execution
-        const multiResult = await queryService.executeStatements(tab.connectionId, statements);
+        const multiResult = await queryService.executeStatements(tab.connectionId, statements, queryId);
         results = multiResult.results;
         sortColumnsMap = {};
 
@@ -160,6 +163,7 @@
       }
     } finally {
       isExecuting = false;
+      activeQueryId = null;
     }
 
     tabStore.updateTabSql(tab.id, sqlValue);
@@ -181,6 +185,15 @@
   function handleSort(resultIndex: number, sorts: SortColumn[]) {
     sortColumnsMap[resultIndex] = sorts;
     sortColumnsMap = { ...sortColumnsMap }; // trigger reactivity
+  }
+
+  async function handleCancel() {
+    if (!activeQueryId) return;
+    try {
+      await tauri.cancelQuery(activeQueryId);
+    } catch (err) {
+      uiStore.showError(`Failed to cancel query: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   function handleSplitMouseDown(e: MouseEvent) {
@@ -454,6 +467,7 @@
       <div class="loading-state">
         <span class="spinner"></span>
         <span>Executing query...</span>
+        <button class="cancel-btn" onclick={handleCancel} title="Cancel query">Cancel</button>
       </div>
     {:else if errorMessage && results.length === 0}
       <div class="error-state">
@@ -775,5 +789,21 @@
     font-weight: 600;
     color: var(--text-secondary);
     flex-shrink: 0;
+  }
+
+  .cancel-btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: var(--font-sans);
+    color: var(--error);
+    background: none;
+    border: 1px solid var(--error);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    margin-left: 8px;
+  }
+
+  .cancel-btn:hover {
+    background: rgba(243, 139, 168, 0.1);
   }
 </style>

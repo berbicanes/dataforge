@@ -26,8 +26,12 @@ export async function pingConnection(connectionId: string): Promise<boolean> {
 }
 
 // Query execution
-export async function executeQuery(connectionId: string, sql: string, timeoutSecs?: number): Promise<QueryResponse> {
-  return invoke<QueryResponse>('execute_query', { connectionId, sql, timeoutSecs: timeoutSecs ?? null });
+export async function executeQuery(connectionId: string, sql: string, timeoutSecs?: number, queryId?: string): Promise<QueryResponse> {
+  return invoke<QueryResponse>('execute_query', { connectionId, sql, timeoutSecs: timeoutSecs ?? null, queryId: queryId ?? null });
+}
+
+export async function cancelQuery(queryId: string): Promise<boolean> {
+  return invoke<boolean>('cancel_query', { queryId });
 }
 
 // Generic schema browsing (all databases)

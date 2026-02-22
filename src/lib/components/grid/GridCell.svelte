@@ -24,20 +24,28 @@
 
   let isEditing = $state(false);
   let editValue = $state('');
-  let inputEl = $state<HTMLInputElement | undefined>(undefined);
+  let inputEl = $state<HTMLInputElement | HTMLTextAreaElement | undefined>(undefined);
 
   let displayValue = $derived(extractCellValue(value));
   let cellIsNull = $derived(isNull(value));
   let isBool = $derived(value.type === 'Bool');
   let isNumeric = $derived(value.type === 'Int' || value.type === 'Float');
+  let isJson = $derived(value.type === 'Json' || column.data_type.toLowerCase().includes('json'));
+  let isLongText = $derived(!isJson && displayValue.length > 100);
+  let useTextarea = $derived(isJson || isLongText);
 
   function handleDblClick() {
     if (!editable || !onEdit) return;
+    if (isBool && !cellIsNull) {
+      // Toggle boolean directly without entering edit mode
+      onEdit(value.type === 'Bool' && value.value ? 'false' : 'true');
+      return;
+    }
     isEditing = true;
     editValue = cellIsNull ? '' : displayValue;
     requestAnimationFrame(() => {
       inputEl?.focus();
-      inputEl?.select();
+      if (inputEl instanceof HTMLInputElement) inputEl.select();
     });
   }
 
@@ -58,7 +66,7 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && (!useTextarea || e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSave();
     } else if (e.key === 'Escape') {
@@ -85,13 +93,25 @@
   tabindex="-1"
 >
   {#if isEditing}
-    <input
-      bind:this={inputEl}
-      bind:value={editValue}
-      class="cell-input"
-      onblur={handleSave}
-      onkeydown={handleKeydown}
-    />
+    {#if useTextarea}
+      <textarea
+        bind:this={inputEl}
+        bind:value={editValue}
+        class="cell-textarea"
+        class:json={isJson}
+        onblur={handleSave}
+        onkeydown={handleKeydown}
+        rows="4"
+      ></textarea>
+    {:else}
+      <input
+        bind:this={inputEl}
+        bind:value={editValue}
+        class="cell-input"
+        onblur={handleSave}
+        onkeydown={handleKeydown}
+      />
+    {/if}
     {#if onSetNull}
       <button
         class="null-btn"
@@ -99,6 +119,16 @@
         title="Set NULL"
       >NULL</button>
     {/if}
+  {:else if cellIsNull}
+    <span class="null-badge">NULL</span>
+  {:else if isBool && editable}
+    <input
+      type="checkbox"
+      class="bool-checkbox"
+      checked={value.type === 'Bool' && value.value}
+      onchange={() => { if (onEdit) onEdit(value.type === 'Bool' && value.value ? 'false' : 'true'); }}
+    />
+    <span class="cell-text">{displayValue}</span>
   {:else}
     <span class="cell-text truncate">{displayValue}</span>
   {/if}
@@ -123,10 +153,20 @@
     padding-left: 7px;
   }
 
-  .grid-cell.null-value .cell-text {
+  .null-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-mono);
     color: var(--text-muted);
-    font-style: italic;
-    opacity: 0.6;
+    background: var(--bg-tertiary, rgba(69, 71, 90, 0.3));
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    opacity: 0.7;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
   }
 
   .grid-cell.numeric {
@@ -176,5 +216,34 @@
   .null-btn:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
+  }
+
+  .cell-textarea {
+    flex: 1;
+    min-width: 0;
+    min-height: 60px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    outline: none;
+    resize: vertical;
+    line-height: 1.4;
+  }
+
+  .cell-textarea.json {
+    font-family: var(--font-mono);
+    tab-size: 2;
+  }
+
+  .bool-checkbox {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
   }
 </style>

@@ -67,7 +67,7 @@ src-tauri/                    # Backend (Rust)
 ├── src/
 │   ├── commands/
 │   │   ├── connection.rs     # connect_db, disconnect_db, test_connection
-│   │   ├── query.rs          # execute_query
+│   │   ├── query.rs          # execute_query, cancel_query
 │   │   ├── schema.rs         # Generic: get_containers, get_items, get_item_fields,
 │   │   │                     #   get_item_data, get_item_count, get_database_category
 │   │   │                     # SQL: get_schemas, get_tables, get_columns, get_indexes,
@@ -78,6 +78,7 @@ src-tauri/                    # Backend (Rust)
 │   │   ├── keyvalue.rs       # get_value, set_value, delete_keys, get_key_type, scan_keys
 │   │   └── graph.rs          # get_labels, get_relationship_types, get_node_properties, get_nodes
 │   ├── db/
+│   │   ├── cancel.rs         # CancellationRegistry (query cancellation via oneshot channels)
 │   │   ├── pool.rs           # PoolManager (HashMap<String, Arc<DriverHandle>>)
 │   │   ├── handle.rs         # DriverHandle enum (Sql, Document, KeyValue, Graph)
 │   │   ├── traits.rs         # Trait hierarchy: DbDriver, SqlDriver, DocumentDriver,
@@ -155,6 +156,9 @@ npm run check            # TypeScript/Svelte type checking
 - Settings modal — editor/grid font sizes, default page size, confirm-before-delete toggle
 - Connection color coding — 8-color palette, colored sidebar border, colored tab stripe
 - Connection duplication — right-click → Duplicate creates copy with "(copy)" suffix
+- DDL viewer — dedicated sub-tab showing CREATE TABLE DDL with copy button
+- Type-aware cell editing — boolean checkbox toggle, JSON/long-text textarea, NULL pill badges
+- Query cancellation — cancel running queries with Cancel button, backend tokio::select! with oneshot channels
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -249,14 +253,14 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Connection color coding**: Assign colors to connections, show colored border in sidebar and colored stripe on tabs
 - [x] **Connection duplication**: Right-click connection → Duplicate creates a copy with "(copy)" suffix
 
-### Phase 11: DDL Viewer & Type-Aware Editing
-- [ ] **DDL/Source viewer**: View CREATE TABLE DDL for any table in a dedicated sub-tab with read-only CodeMirror and copy button (PostgreSQL, MySQL, SQLite, MSSQL, ClickHouse + wrapper drivers)
-- [ ] **Type-aware cell editing**: Boolean checkbox toggle, JSON textarea with monospace editing, auto-textarea for long text, NULL pill badge display
-- [ ] **NULL badge styling**: Replace italic NULL text with a styled pill badge for better visibility
+### Phase 11: DDL Viewer & Type-Aware Editing ✅
+- [x] **DDL/Source viewer**: View CREATE TABLE DDL for any table in a dedicated sub-tab with read-only CodeMirror and copy button (PostgreSQL, MySQL, SQLite, MSSQL, ClickHouse + wrapper drivers)
+- [x] **Type-aware cell editing**: Boolean checkbox toggle, JSON textarea with monospace editing, auto-textarea for long text, NULL pill badge display
+- [x] **NULL badge styling**: Replace italic NULL text with a styled pill badge for better visibility
 
-### Phase 12: Query Cancellation
-- [ ] **Query cancellation backend**: Cancellation tokens using tokio::select! with oneshot channels, QueryCancelled error variant
-- [ ] **Cancel button UI**: Show Cancel button next to spinner during query execution, call cancel_query command on click
+### Phase 12: Query Cancellation ✅
+- [x] **Query cancellation backend**: Cancellation tokens using tokio::select! with oneshot channels, QueryCancelled error variant
+- [x] **Cancel button UI**: Show Cancel button next to spinner during query execution, call cancel_query command on click
 
 ### Phase 13: Production Readiness
 - [ ] **Auto-update mechanism**: Integrate @tauri-apps/plugin-updater for in-app update notifications and automatic downloads

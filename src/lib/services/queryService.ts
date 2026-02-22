@@ -3,11 +3,11 @@ import type { QueryResponse, MultiStatementResult } from '$lib/types/query';
 import { uiStore } from '$lib/stores/ui.svelte';
 import { queryHistoryStore } from '$lib/stores/queryHistory.svelte';
 
-export async function executeQuery(connectionId: string, sql: string): Promise<QueryResponse | null> {
+export async function executeQuery(connectionId: string, sql: string, queryId?: string): Promise<QueryResponse | null> {
   uiStore.setLoading(true, 'Executing query...');
   const startTime = performance.now();
   try {
-    const result = await tauri.executeQuery(connectionId, sql.trim());
+    const result = await tauri.executeQuery(connectionId, sql.trim(), undefined, queryId);
 
     queryHistoryStore.addEntry({
       connectionId,
@@ -38,7 +38,8 @@ export async function executeQuery(connectionId: string, sql: string): Promise<Q
 
 export async function executeStatements(
   connectionId: string,
-  statements: string[]
+  statements: string[],
+  queryId?: string
 ): Promise<MultiStatementResult> {
   uiStore.setLoading(true, 'Executing queries...');
   const results: QueryResponse[] = [];
@@ -52,7 +53,7 @@ export async function executeStatements(
       const startTime = performance.now();
 
       try {
-        const result = await tauri.executeQuery(connectionId, stmt);
+        const result = await tauri.executeQuery(connectionId, stmt, undefined, queryId);
         results.push(result);
 
         queryHistoryStore.addEntry({

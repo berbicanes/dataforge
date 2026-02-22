@@ -17,7 +17,10 @@
     onqueryresult?: (detail: { executionTime: number; rowCount: number }) => void;
   } = $props();
 
-  let activeSubTab = $state<'data' | 'structure'>('data');
+  let activeSubTab = $state<'data' | 'structure' | 'ddl'>('data');
+  let ddlText = $state<string | null>(null);
+  let ddlLoading = $state(false);
+  let ddlCopied = $state(false);
   let result = $state<QueryResponse | null>(null);
   let isLoading = $state(false);
   let totalRows = $state(0);
@@ -93,6 +96,29 @@
       totalRows = await tauri.getRowCount(tab.connectionId, tab.schema, tab.table, filters);
     } catch {
       totalRows = 0;
+    }
+  }
+
+  async function loadDdl() {
+    if (!tab.schema || !tab.table) return;
+    ddlLoading = true;
+    try {
+      ddlText = await tauri.exportDdl(tab.connectionId, tab.schema, tab.table);
+    } catch (err) {
+      ddlText = `-- Failed to load DDL: ${err instanceof Error ? err.message : String(err)}`;
+    } finally {
+      ddlLoading = false;
+    }
+  }
+
+  async function copyDdl() {
+    if (!ddlText) return;
+    try {
+      await navigator.clipboard.writeText(ddlText);
+      ddlCopied = true;
+      setTimeout(() => { ddlCopied = false; }, 2000);
+    } catch {
+      uiStore.showError('Failed to copy DDL to clipboard');
     }
   }
 
@@ -328,6 +354,17 @@
       </svg>
       Structure
     </button>
+    <button
+      class="sub-tab"
+      class:active={activeSubTab === 'ddl'}
+      onclick={() => { activeSubTab = 'ddl'; if (!ddlText && !ddlLoading) loadDdl(); }}
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M4 2h6l4 4v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+        <polyline points="10 2 10 6 14 6" stroke="currentColor" stroke-width="1.2" fill="none"/>
+      </svg>
+      DDL
+    </button>
     <span class="sub-tab-title truncate">{tab.schema}.{tab.table}</span>
     {#if activeSubTab === 'data'}
       <div class="sub-tab-actions">
@@ -365,6 +402,13 @@
         <button class="sub-tab-btn" onclick={openAlterTable} title="Alter Table">Alter Table</button>
         <button class="sub-tab-btn" onclick={openIndexModal} title="Manage Indexes">Indexes</button>
         <button class="sub-tab-btn" onclick={openCreateTable} title="Create New Table">New Table</button>
+      </div>
+    {:else if activeSubTab === 'ddl'}
+      <div class="sub-tab-actions">
+        <button class="sub-tab-btn" onclick={() => { ddlText = null; loadDdl(); }} title="Refresh DDL">Refresh</button>
+        <button class="sub-tab-btn" class:copied={ddlCopied} onclick={copyDdl} disabled={!ddlText || ddlLoading} title="Copy DDL">
+          {ddlCopied ? 'Copied!' : 'Copy'}
+        </button>
       </div>
     {/if}
   </div>
@@ -409,12 +453,27 @@
           </div>
         {/if}
       </div>
-    {:else}
+    {:else if activeSubTab === 'structure'}
       <TableStructure
         connectionId={tab.connectionId}
         schema={tab.schema ?? ''}
         table={tab.table ?? ''}
       />
+    {:else if activeSubTab === 'ddl'}
+      <div class="ddl-view">
+        {#if ddlLoading}
+          <div class="loading-state">
+            <span class="spinner"></span>
+            <span>Loading DDL...</span>
+          </div>
+        {:else if ddlText}
+          <pre class="ddl-code"><code>{ddlText}</code></pre>
+        {:else}
+          <div class="empty-state">
+            <span class="text-muted">No DDL available</span>
+          </div>
+        {/if}
+      </div>
     {/if}
   </div>
 </div>
@@ -583,5 +642,29 @@
     justify-content: center;
     height: 100%;
     font-size: 13px;
+  }
+
+  .sub-tab-btn.copied {
+    color: var(--success, #a6e3a1);
+    border-color: var(--success, #a6e3a1);
+  }
+
+  .ddl-view {
+    height: 100%;
+    overflow: auto;
+    background: var(--bg-primary);
+  }
+
+  .ddl-code {
+    margin: 0;
+    padding: 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre;
+    tab-size: 2;
+    overflow: auto;
+    height: 100%;
   }
 </style>

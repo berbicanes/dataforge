@@ -20,6 +20,9 @@ pub enum AppError {
     #[error("Query timed out after {0} seconds")]
     QueryTimeout(u64),
 
+    #[error("Query cancelled")]
+    QueryCancelled,
+
     #[allow(dead_code)]
     #[error("Failed to connect to {db_type} at {host}: {cause}")]
     ConnectionFailed {
@@ -38,6 +41,7 @@ impl AppError {
             AppError::Serialization(_) => "SERIALIZATION_ERROR",
             AppError::UnsupportedOperation(_) => "UNSUPPORTED_OPERATION",
             AppError::QueryTimeout(_) => "QUERY_TIMEOUT",
+            AppError::QueryCancelled => "QUERY_CANCELLED",
             AppError::ConnectionFailed { .. } => "CONNECTION_FAILED",
         }
     }
