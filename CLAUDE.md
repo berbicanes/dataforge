@@ -7,9 +7,22 @@ A desktop database management tool built with **Tauri 2 (Rust)** + **SvelteKit 5
 - **Desktop runtime**: Tauri 2 (Rust backend)
 - **Frontend**: SvelteKit 5 with Svelte 5 runes, TypeScript
 - **SQL Editor**: CodeMirror 6 (SQL highlighting, autocomplete, One Dark theme)
-- **Database drivers**: SQLx (async Rust) — PostgreSQL + MySQL
+- **Database drivers**: sqlx (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift), tiberius (MSSQL), clickhouse, mongodb, scylla (Cassandra/ScyllaDB), redis, neo4rs (Neo4j), aws-sdk-dynamodb (DynamoDB)
 - **State persistence**: @tauri-apps/plugin-store (JSON file)
 - **Styling**: CSS variables, dark theme only, JetBrains Mono / Inter fonts
+
+## Supported Databases (17)
+
+| Group | Databases | Driver |
+|-------|-----------|--------|
+| SQL | PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift | sqlx |
+| SQL | MSSQL | tiberius + bb8 |
+| SQL | ClickHouse | clickhouse (HTTP) |
+| SQL (stubs) | Oracle, Snowflake, BigQuery | Feature-gated, not yet implemented |
+| NoSQL — Document | MongoDB, DynamoDB | mongodb, aws-sdk-dynamodb |
+| NoSQL — Wide Column | Cassandra, ScyllaDB | scylla |
+| NoSQL — Key-Value | Redis | redis |
+| NoSQL — Graph | Neo4j | neo4rs |
 
 ## Project Structure
 
@@ -17,40 +30,76 @@ A desktop database management tool built with **Tauri 2 (Rust)** + **SvelteKit 5
 src/                          # Frontend (SvelteKit)
 ├── lib/
 │   ├── components/
-│   │   ├── editor/           # SqlEditor (CodeMirror)
+│   │   ├── editor/           # SqlEditor (CodeMirror, multi-dialect)
 │   │   ├── grid/             # DataGrid, GridHeader, GridRow, GridCell, Pagination
-│   │   ├── modals/           # ConnectionModal, ConfirmDialog
+│   │   ├── modals/           # ConnectionModal (dynamic form for 17 DBs), ConfirmDialog
 │   │   ├── sidebar/          # Sidebar, ConnectionList, SchemaTree, TreeNode
 │   │   ├── structure/        # TableStructure, ColumnsView, IndexesView, ForeignKeysView
-│   │   ├── tabs/             # TabBar, TabContent, QueryTab, TableTab
+│   │   ├── tabs/             # TabBar, TabContent, QueryTab, TableTab,
+│   │   │                     # DocumentTab, KeyValueTab, GraphTab
+│   │   ├── viewers/          # JsonViewer, KeyValueViewer
 │   │   ├── StatusBar.svelte
 │   │   └── Toolbar.svelte
-│   ├── services/             # Tauri IPC wrappers (connectionService, queryService, schemaService)
+│   ├── services/             # Tauri IPC wrappers
+│   │   ├── tauri.ts          # All invoke() wrappers (35+ commands)
+│   │   ├── connectionService.ts
+│   │   ├── queryService.ts
+│   │   ├── schemaService.ts  # SQL-specific + generic container/item/field loaders
+│   │   ├── documentService.ts # MongoDB/DynamoDB CRUD
+│   │   ├── keyvalueService.ts # Redis operations
+│   │   └── graphService.ts   # Neo4j browsing
 │   ├── stores/               # Svelte 5 rune stores (connections, tabs, schema, ui)
-│   ├── types/                # TypeScript types (connection, query, schema, tabs)
+│   ├── types/
+│   │   ├── connection.ts     # DatabaseType (17), ConnectionConfig, CloudAuth
+│   │   ├── database.ts       # DB_METADATA constant, DB_GROUPS
+│   │   ├── query.ts          # QueryResponse, CellValue, ColumnDef
+│   │   ├── schema.ts         # SQL-specific + generic (ContainerInfo, ItemInfo, FieldInfo)
+│   │   └── tabs.ts           # TabType: query | table | document | keyvalue | graph
 │   └── utils/                # formatters, sqlHelpers
 ├── routes/
 │   ├── +page.svelte          # Main app layout
 │   └── +layout.svelte
-└── app.css                   # Global styles + CSS variables
+└── app.css                   # Global styles + CSS variables + badge styles (17 DBs)
 
 src-tauri/                    # Backend (Rust)
 ├── src/
-│   ├── commands/             # Tauri IPC command handlers
+│   ├── commands/
 │   │   ├── connection.rs     # connect_db, disconnect_db, test_connection
 │   │   ├── query.rs          # execute_query
-│   │   └── schema.rs         # get_schemas, get_tables, get_columns, get_indexes,
-│   │                         # get_foreign_keys, get_table_data, get_row_count,
-│   │                         # update_cell, insert_row, delete_rows
+│   │   ├── schema.rs         # Generic: get_containers, get_items, get_item_fields,
+│   │   │                     #   get_item_data, get_item_count, get_database_category
+│   │   │                     # SQL: get_schemas, get_tables, get_columns, get_indexes,
+│   │   │                     #   get_foreign_keys, get_table_data, get_row_count,
+│   │   │                     #   update_cell, insert_row, delete_rows
+│   │   ├── document.rs       # insert_document, update_document, delete_documents
+│   │   ├── keyvalue.rs       # get_value, set_value, delete_keys, get_key_type, scan_keys
+│   │   └── graph.rs          # get_labels, get_relationship_types, get_node_properties, get_nodes
 │   ├── db/
-│   │   ├── pool.rs           # PoolManager (Arc<RwLock<HashMap>>)
-│   │   ├── traits.rs         # DbDriver async trait (11 methods)
-│   │   ├── postgres.rs       # PostgreSQL implementation
-│   │   ├── mysql.rs          # MySQL implementation
-│   │   └── types.rs          # Type conversion helpers
+│   │   ├── pool.rs           # PoolManager (HashMap<String, Arc<DriverHandle>>)
+│   │   ├── handle.rs         # DriverHandle enum (Sql, Document, KeyValue, Graph)
+│   │   ├── traits.rs         # Trait hierarchy: DbDriver, SqlDriver, DocumentDriver,
+│   │   │                     #   KeyValueDriver, GraphDriver
+│   │   ├── types.rs          # Type conversion helpers (PG/MySQL)
+│   │   └── drivers/
+│   │       ├── postgres.rs   # PostgreSQL (sqlx)
+│   │       ├── mysql.rs      # MySQL (sqlx)
+│   │       ├── mariadb.rs    # MariaDB (wraps MySqlDriver)
+│   │       ├── sqlite.rs     # SQLite (sqlx)
+│   │       ├── cockroachdb.rs # CockroachDB (wraps PostgresDriver)
+│   │       ├── redshift.rs   # Redshift (wraps PostgresDriver)
+│   │       ├── mssql.rs      # MSSQL (tiberius + bb8)
+│   │       ├── clickhouse.rs # ClickHouse (HTTP)
+│   │       ├── mongodb.rs    # MongoDB (DocumentDriver)
+│   │       ├── cassandra.rs  # Cassandra/ScyllaDB (SqlDriver via CQL)
+│   │       ├── redis.rs      # Redis (KeyValueDriver)
+│   │       ├── neo4j.rs      # Neo4j (GraphDriver)
+│   │       ├── dynamodb.rs   # DynamoDB (DocumentDriver)
+│   │       ├── oracle.rs     # Oracle (stub, feature-gated)
+│   │       ├── snowflake.rs  # Snowflake (stub, feature-gated)
+│   │       └── bigquery.rs   # BigQuery (stub, feature-gated)
 │   ├── models/               # Serde structs (connection, query, schema)
 │   ├── error.rs              # AppError enum
-│   ├── lib.rs                # Tauri app builder + command registration
+│   ├── lib.rs                # Tauri app builder + command registration (35+ commands)
 │   └── main.rs               # Entry point
 └── Cargo.toml
 ```
@@ -65,19 +114,31 @@ npm run tauri build      # Build production binary
 npm run check            # TypeScript/Svelte type checking
 ```
 
-## Current State (v0.1.0)
+## Current State (v0.2.0)
 
 ### What works:
-- Connect to PostgreSQL and MySQL databases
-- Browse schemas → tables → columns in sidebar tree
-- Open table tabs (data view + structure view with columns/indexes/FK tabs)
-- Open query tabs with CodeMirror SQL editor (syntax highlighting, autocomplete, Ctrl+Enter to run)
+- Connect to 14 database engines (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift, MSSQL, ClickHouse, MongoDB, Cassandra/ScyllaDB, Redis, Neo4j, DynamoDB)
+- Dynamic connection modal with grouped database selector and conditional fields per database type
+- Browse schemas/containers in sidebar tree (SQL: schemas > tables > columns; NoSQL: containers > items > fields)
+- Open table tabs (data view + structure view with columns/indexes/FK tabs) for SQL databases
+- Open document tabs with JSON viewer for MongoDB/DynamoDB
+- Open key-value tabs with type-aware viewer (string/list/set/hash/zset) for Redis
+- Open graph tabs with label browser and node data grid for Neo4j
+- Query tabs with CodeMirror SQL editor (multi-dialect: PostgreSQL, MySQL, SQLite, MSSQL, Cassandra)
 - Execute queries and view results in paginated data grid
-- Inline cell editing (double-click), row insertion, row deletion
+- Inline cell editing (double-click), row insertion, row deletion for SQL databases
+- Document CRUD (insert/update/delete) for MongoDB/DynamoDB
+- Key-value operations (get/set/delete/scan) for Redis
 - Connection management (add/edit/delete/test) persisted to disk
-- Tab system with deduplication (reopening same table activates existing tab)
+- Tab system with deduplication for all tab types
+- DB_METADATA-driven badges for all 17 database types in sidebar/toolbar
 - Status bar showing connection, execution time, row count
 - Dark theme with CSS variables
+
+### Stub databases (feature-gated, not yet functional):
+- Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
+- Snowflake (`cargo build --features snowflake`)
+- BigQuery (`cargo build --features bigquery`)
 
 ### Known issues to fix:
 - **SQL injection risk**: update_cell, insert_row, delete_rows use string concatenation instead of parameterized queries
@@ -155,17 +216,24 @@ npm run check            # TypeScript/Svelte type checking
 - [ ] **Split panes**: View multiple tabs side by side
 - [ ] **Global search**: Ctrl+P to search tables, queries, connections
 
-### Phase 8: Additional Database Support
-- [ ] **SQLite**: Add SQLite driver (file-based)
-- [ ] **MariaDB**: Verify compatibility with MySQL driver
-- [ ] **MongoDB**: Add MongoDB support (different paradigm — document viewer)
+### Phase 8: Complete Stub Databases
+- [ ] **Oracle**: Implement full driver using oracle crate (requires Oracle Instant Client)
+- [ ] **Snowflake**: Implement full driver using snowflake-api crate (REST-based)
+- [ ] **BigQuery**: Implement full driver using gcp-bigquery-client crate (REST-based)
 
 ## Architecture Notes
 
-- **DbDriver trait** (`src-tauri/src/db/traits.rs`): All database-specific logic goes behind this async trait. When adding a new database, implement the 11 trait methods and register in pool.rs.
+- **Trait hierarchy** (`src-tauri/src/db/traits.rs`):
+  - `DbDriver` (base, all 14 implement): `execute_raw`, `category`, `get_containers`, `get_items`, `get_item_fields`, `get_item_data`, `get_item_count`
+  - `SqlDriver: DbDriver` (relational + analytics + CQL): adds `get_schemas`, `get_tables`, `get_columns`, `get_indexes`, `get_foreign_keys`, `update_cell`, `insert_row`, `delete_rows`
+  - `DocumentDriver: DbDriver` (MongoDB, DynamoDB): adds `insert_document`, `update_document`, `delete_documents`
+  - `KeyValueDriver: DbDriver` (Redis): adds `get_value`, `set_value`, `delete_keys`, `get_key_type`, `scan_keys`
+  - `GraphDriver: DbDriver` (Neo4j): adds `get_labels`, `get_relationship_types`, `get_node_properties`, `get_nodes`
+- **DriverHandle enum** (`src-tauri/src/db/handle.rs`): Wraps `Arc<dyn SqlDriver>`, `Arc<dyn DocumentDriver>`, etc. Stored as `Arc<DriverHandle>` in PoolManager. Provides `base()`, `as_sql()`, `as_document()`, `as_keyvalue()`, `as_graph()` accessors.
+- **DB_METADATA** (`src/lib/types/database.ts`): Per-database metadata constant (category, defaultPort, requiresHost, requiresFilePath, queryLanguage, badge, badgeClass, containerLabel, itemLabel, fieldLabel). Drives the dynamic connection modal, sidebar badges, and schema tree labels.
+- **Schema cache** (`src/lib/stores/schema.svelte.ts`): Dual cache — `SchemaCache` for SQL-specific data (schemas/tables/columns/indexes/FKs) and `BrowserCache` for generic data (containers/items/fields). Per-connection, lazy-loads on tree expand, clears on disconnect.
 - **Stores use Svelte 5 runes** (`$state`, `$derived`): No legacy Svelte stores. All reactive state uses the runes API.
 - **IPC pattern**: Frontend services in `src/lib/services/` call `invoke()` from `@tauri-apps/api/core`, which maps to `#[tauri::command]` functions in Rust.
-- **Schema cache** (`src/lib/stores/schema.svelte.ts`): Per-connection cache keyed by connection ID. Lazy-loads on tree expand. Clear on disconnect.
 - **CSS variables**: All colors/spacing defined in `app.css` `:root`. Components use `var(--name)` exclusively — changing theme means swapping variable values.
 
 ## Code Conventions
