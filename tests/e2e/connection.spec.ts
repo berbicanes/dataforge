@@ -8,7 +8,7 @@ test.describe('Connection flow', () => {
   });
 
   test('should display welcome screen on first launch', async ({ page }) => {
-    await expect(page.locator('.welcome-screen, .app-layout')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.welcome-screen, .app-layout').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should open connection modal from welcome screen or toolbar', async ({ page }) => {
