@@ -12,11 +12,18 @@
     showCheckbox = false,
     isDeleted = false,
     modifiedCells,
+    cellSelectionCols,
+    activeCellCol,
+    searchMatchCols,
+    currentMatchCol,
+    foreignKeys,
+    connectionId,
     onCellEdit,
     onCellSetNull,
     onSelect,
     onContextMenu,
     onExpandCell,
+    onCellMouseDown,
   }: {
     row: CellValue[];
     columns: ColumnDef[];
@@ -27,11 +34,18 @@
     showCheckbox?: boolean;
     isDeleted?: boolean;
     modifiedCells?: Set<number>;
+    cellSelectionCols?: { start: number; end: number } | null;
+    activeCellCol?: number | null;
+    searchMatchCols?: Set<number> | null;
+    currentMatchCol?: number | null;
+    foreignKeys?: Map<number, { referencedSchema: string; referencedTable: string; referencedColumn: string }> | null;
+    connectionId?: string;
     onCellEdit?: (colIndex: number, value: string) => void;
     onCellSetNull?: (colIndex: number) => void;
     onSelect?: (rowIndex: number, e: MouseEvent) => void;
     onContextMenu?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
     onExpandCell?: (colIndex: number) => void;
+    onCellMouseDown?: (colIndex: number, e: MouseEvent) => void;
   } = $props();
 
   let isEven = $derived(rowIndex % 2 === 0);
@@ -61,16 +75,28 @@
   </div>
   {#each row as cell, colIndex}
     {@const w = columnWidths[columns[colIndex]?.name] ?? 150}
+    {@const inSelection = cellSelectionCols != null && colIndex >= cellSelectionCols.start && colIndex <= cellSelectionCols.end}
+    {@const isActive = activeCellCol === colIndex}
+    {@const isMatch = searchMatchCols?.has(colIndex) ?? false}
+    {@const isCurrent = currentMatchCol === colIndex}
+    {@const fk = foreignKeys?.get(colIndex) ?? null}
     <GridCell
       value={cell}
       column={columns[colIndex]}
       width={w}
       editable={editable && !isDeleted}
       isModified={modifiedCells?.has(colIndex) ?? false}
+      isCellSelected={inSelection}
+      isActiveCell={isActive}
+      isSearchMatch={isMatch}
+      isCurrentMatch={isCurrent}
+      foreignKey={fk}
+      {connectionId}
       onEdit={onCellEdit ? (val) => onCellEdit!(colIndex, val) : undefined}
       onSetNull={onCellSetNull ? () => onCellSetNull!(colIndex) : undefined}
       onContextMenu={(e) => handleRowContextMenu(colIndex, e)}
       onExpandCell={onExpandCell ? () => onExpandCell!(colIndex) : undefined}
+      onCellMouseDown={onCellMouseDown ? (e) => onCellMouseDown!(colIndex, e) : undefined}
     />
   {/each}
 </div>

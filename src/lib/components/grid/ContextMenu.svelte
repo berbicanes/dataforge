@@ -13,8 +13,10 @@
     table,
     selectedRows = [],
     editable = false,
+    hasCellRange = false,
     onClose,
     onCopyCell,
+    onCopyCells,
     onCopyRows,
     onCopyAsInsert,
     onCopyAsJson,
@@ -33,8 +35,10 @@
     table?: string;
     selectedRows?: CellValue[][];
     editable?: boolean;
+    hasCellRange?: boolean;
     onClose: () => void;
     onCopyCell?: () => void;
+    onCopyCells?: () => void;
     onCopyRows?: () => void;
     onCopyAsInsert?: () => void;
     onCopyAsJson?: () => void;
@@ -94,6 +98,13 @@
     <span class="menu-label">Copy cell</span>
     <span class="menu-hint">{cellIsNull ? 'NULL' : cellDisplay.length > 20 ? cellDisplay.slice(0, 20) + '...' : cellDisplay}</span>
   </button>
+
+  {#if hasCellRange && onCopyCells}
+    <button class="menu-item" onclick={() => { onCopyCells?.(); onClose(); }} role="menuitem">
+      <span class="menu-label">Copy cells</span>
+      <span class="menu-hint">TSV</span>
+    </button>
+  {/if}
 
   <button class="menu-item" onclick={() => { onCopyRows?.(); onClose(); }} role="menuitem">
     <span class="menu-label">{hasSelection ? `Copy ${selectedRows.length} rows` : 'Copy row'}</span>

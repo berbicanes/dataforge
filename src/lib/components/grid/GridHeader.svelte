@@ -14,6 +14,8 @@
     onFilterToggle,
     showFilterBar = false,
     onReorder,
+    onColumnSelect,
+    onColumnContextMenu,
   }: {
     columns: ColumnDef[];
     columnWidths: Record<string, number>;
@@ -27,6 +29,8 @@
     onFilterToggle?: () => void;
     showFilterBar?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
+    onColumnSelect?: (colIndex: number, e: MouseEvent) => void;
+    onColumnContextMenu?: (colIndex: number, e: MouseEvent) => void;
   } = $props();
 
   // Resize state
@@ -70,6 +74,23 @@
       } else {
         onSort([{ column: colName, direction: 'ASC' }]);
       }
+    }
+  }
+
+  function handleHeaderClick(colIndex: number, colName: string, e: MouseEvent) {
+    // Ctrl/Cmd+click: column selection
+    if ((e.ctrlKey || e.metaKey) && onColumnSelect) {
+      e.preventDefault();
+      onColumnSelect(colIndex, e);
+      return;
+    }
+    handleSortClick(colName, e);
+  }
+
+  function handleHeaderContextMenu(colIndex: number, e: MouseEvent) {
+    if (onColumnContextMenu) {
+      e.preventDefault();
+      onColumnContextMenu(colIndex, e);
     }
   }
 
@@ -154,7 +175,8 @@
         class:dragging={dragIndex === i}
         style="width: {w}px; min-width: {w}px; max-width: {w}px;"
         title="{col.name} ({col.data_type})"
-        onclick={(e) => handleSortClick(col.name, e)}
+        onclick={(e) => handleHeaderClick(i, col.name, e)}
+        oncontextmenu={(e) => handleHeaderContextMenu(i, e)}
         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSortClick(col.name, e as unknown as MouseEvent); } }}
         draggable="true"
         ondragstart={(e) => handleDragStart(i, e)}

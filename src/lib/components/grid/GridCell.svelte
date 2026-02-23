@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ColumnDef, CellValue } from '$lib/types/query';
   import { extractCellValue, isNull, isLargeValue, getLargeValueLength, truncateDisplay, formatCharCount } from '$lib/utils/formatters';
+  import FkDropdown from './FkDropdown.svelte';
 
   let {
     value,
@@ -8,20 +9,34 @@
     width = 150,
     editable = false,
     isModified = false,
+    isCellSelected = false,
+    isActiveCell = false,
+    isSearchMatch = false,
+    isCurrentMatch = false,
+    foreignKey,
+    connectionId,
     onEdit,
     onSetNull,
     onContextMenu,
     onExpandCell,
+    onCellMouseDown,
   }: {
     value: CellValue;
     column: ColumnDef;
     width?: number;
     editable?: boolean;
     isModified?: boolean;
+    isCellSelected?: boolean;
+    isActiveCell?: boolean;
+    isSearchMatch?: boolean;
+    isCurrentMatch?: boolean;
+    foreignKey?: { referencedSchema: string; referencedTable: string; referencedColumn: string } | null;
+    connectionId?: string;
     onEdit?: (value: string) => void;
     onSetNull?: () => void;
     onContextMenu?: (e: MouseEvent) => void;
     onExpandCell?: () => void;
+    onCellMouseDown?: (e: MouseEvent) => void;
   } = $props();
 
   let isEditing = $state(false);
@@ -39,16 +54,15 @@
   let isTruncatedDisplay = $derived(displayValue.length > 500);
   let isLarge = $derived(isLargeValue(value));
   let largeLength = $derived(isLarge ? getLargeValueLength(value) : 0);
+  let showFkDropdown = $derived(isEditing && !!foreignKey && !!connectionId);
 
   function handleDblClick() {
     if (!editable || !onEdit) return;
     if (isLarge) {
-      // For large values, expand first instead of editing
       onExpandCell?.();
       return;
     }
     if (isBool && !cellIsNull) {
-      // Toggle boolean directly without entering edit mode
       onEdit(value.type === 'Bool' && value.value ? 'false' : 'true');
       return;
     }
@@ -94,6 +108,19 @@
     e.stopPropagation();
     onExpandCell?.();
   }
+
+  function handleMouseDown(e: MouseEvent) {
+    onCellMouseDown?.(e);
+  }
+
+  function handleFkSelect(val: string) {
+    isEditing = false;
+    onEdit?.(val);
+  }
+
+  function handleFkClose() {
+    isEditing = false;
+  }
 </script>
 
 <div
@@ -102,13 +129,28 @@
   class:numeric={isNumeric}
   class:bool-value={isBool}
   class:modified={isModified}
+  class:cell-selected={isCellSelected}
+  class:active-cell={isActiveCell}
+  class:search-match={isSearchMatch}
+  class:current-match={isCurrentMatch}
   style="width: {width}px; min-width: {width}px; max-width: {width}px;"
   ondblclick={handleDblClick}
   oncontextmenu={handleContextMenu}
+  onmousedown={handleMouseDown}
   role="gridcell"
   tabindex="-1"
 >
-  {#if isEditing}
+  {#if isEditing && showFkDropdown}
+    <FkDropdown
+      connectionId={connectionId!}
+      referencedSchema={foreignKey!.referencedSchema}
+      referencedTable={foreignKey!.referencedTable}
+      referencedColumn={foreignKey!.referencedColumn}
+      currentValue={editValue}
+      onSelect={handleFkSelect}
+      onClose={handleFkClose}
+    />
+  {:else if isEditing}
     {#if useTextarea}
       <textarea
         bind:this={inputEl}
@@ -159,6 +201,13 @@
     </button>
   {:else}
     <span class="cell-text truncate">{truncatedValue}</span>
+    {#if foreignKey && !isEditing}
+      <span class="fk-indicator" title="Foreign key → {foreignKey.referencedTable}.{foreignKey.referencedColumn}">
+        <svg width="8" height="8" viewBox="0 0 16 16" fill="none">
+          <path d="M10 2l4 4-4 4M14 6H6a4 4 0 0 0 0 8h1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+    {/if}
     {#if isTruncatedDisplay}
       <span class="char-count-badge" title="{displayValue.length} characters">{formatCharCount(displayValue.length)}</span>
     {/if}
@@ -177,12 +226,32 @@
     font-size: 12px;
     font-family: var(--font-mono);
     gap: 4px;
+    position: relative;
   }
 
   .grid-cell.modified {
     border-left: 3px solid var(--warning, #fab387);
     padding-left: 7px;
     background: rgba(249, 226, 175, 0.03);
+  }
+
+  .grid-cell.cell-selected {
+    background: rgba(122, 162, 247, 0.12) !important;
+  }
+
+  .grid-cell.active-cell {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    z-index: 1;
+  }
+
+  .grid-cell.search-match {
+    background: rgba(255, 200, 50, 0.25) !important;
+  }
+
+  .grid-cell.current-match {
+    background: rgba(255, 200, 50, 0.5) !important;
+    outline: 1px solid rgba(255, 200, 50, 0.8);
   }
 
   .null-badge {
@@ -319,6 +388,14 @@
     height: 14px;
     accent-color: var(--accent);
     cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .fk-indicator {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+    opacity: 0.5;
     flex-shrink: 0;
   }
 </style>

@@ -5,8 +5,10 @@
   import { changeTracker } from '$lib/stores/changeTracker.svelte';
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { schemaStore } from '$lib/stores/schema.svelte';
+  import * as schemaService from '$lib/services/schemaService';
   import type { Tab } from '$lib/types/tabs';
   import type { QueryResponse, SortColumn, FilterCondition } from '$lib/types/query';
+  import type { ForeignKeyInfo } from '$lib/types/schema';
   import { extractCellValue } from '$lib/utils/formatters';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
   import Pagination from '$lib/components/grid/Pagination.svelte';
@@ -67,6 +69,9 @@
     return conn?.config.db_type ?? 'PostgreSQL';
   });
 
+  // Foreign keys for FK dropdown
+  let tableForeignKeys = $state<ForeignKeyInfo[]>([]);
+
   let offset = $derived((currentPage - 1) * pageSize);
 
   async function loadData() {
@@ -97,6 +102,47 @@
       totalRows = await tauri.getRowCount(tab.connectionId, tab.schema, tab.table, filters);
     } catch {
       totalRows = 0;
+    }
+  }
+
+  async function loadForeignKeys() {
+    if (!tab.schema || !tab.table) return;
+    try {
+      tableForeignKeys = await schemaService.loadForeignKeys(tab.connectionId, tab.schema, tab.table);
+    } catch {
+      tableForeignKeys = [];
+    }
+  }
+
+  function handlePaste(startRow: number, startCol: number, values: string[][]) {
+    if (!result) return;
+
+    if (bulkEditMode) {
+      const edits: Array<{ rowIndex: number; colIndex: number; oldValue: string; newValue: string }> = [];
+      for (let r = 0; r < values.length; r++) {
+        const targetRow = startRow + r;
+        if (targetRow >= result.rows.length) break;
+        for (let c = 0; c < values[r].length; c++) {
+          const targetCol = startCol + c;
+          if (targetCol >= result.columns.length) break;
+          const oldValue = extractCellValue(result.rows[targetRow][targetCol]);
+          edits.push({ rowIndex: targetRow, colIndex: targetCol, oldValue, newValue: values[r][c] });
+        }
+      }
+      if (edits.length > 0) {
+        changeTracker.addCellEditBatch(tab.id, edits);
+      }
+    } else {
+      // Apply directly
+      for (let r = 0; r < values.length; r++) {
+        const targetRow = startRow + r;
+        if (targetRow >= result.rows.length) break;
+        for (let c = 0; c < values[r].length; c++) {
+          const targetCol = startCol + c;
+          if (targetCol >= result.columns.length) break;
+          handleCellEdit(targetRow, targetCol, values[r][c]);
+        }
+      }
     }
   }
 
@@ -326,6 +372,7 @@
   onMount(() => {
     loadData();
     loadTotalRows();
+    loadForeignKeys();
     window.addEventListener('keydown', handleKeydown);
   });
 
@@ -437,11 +484,14 @@
               {filters}
               {modifiedCells}
               {deletedRows}
+              foreignKeys={tableForeignKeys}
+              connectionId={tab.connectionId}
               onCellEdit={handleCellEdit}
               onCellSetNull={handleCellSetNull}
               onSort={handleSort}
               onFiltersChange={handleFiltersChange}
               onFilterByValue={handleFilterByValue}
+              onPaste={handlePaste}
             />
           </div>
           <Pagination

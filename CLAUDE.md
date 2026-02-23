@@ -191,6 +191,12 @@ npm run check            # TypeScript/Svelte type checking
 - Connection keepalive & auto-reconnect — 30s heartbeat ping, exponential backoff reconnection (3 retries: 2s/4s/8s), automatic schema reload on reconnect
 - Virtual scrolling for schema tree — `VirtualTreeList` component virtualizes flat lists above 100 items, buffer rows for smooth scrolling, zero overhead below threshold
 - Stress testing harness — Docker Compose + seed SQL generating 5 schemas x 400 tables x 10 columns (2000 tables) with indexes, FKs, views, functions, sequences, enums
+- Multi-cell selection — click-drag rectangular cell range like Excel, Shift+click extend, keyboard arrow navigation with Shift+Arrow range extend, Ctrl+C copies cell range as TSV
+- Column-level copy — Ctrl+click column header selects entire column, right-click column header for "Copy column values" / "Copy column with header"
+- Paste from Excel/CSV — Ctrl+V parses TSV/CSV from clipboard and applies to cells starting at active cell, batch undo support in bulk edit mode
+- Drag-fill cells — fill handle at bottom-right of selection, drag down/right to fill with detected pattern (repeat, arithmetic sequence, or cycle)
+- Find & replace in grid — Ctrl+F search bar with match highlighting, Ctrl+H replace mode, case-sensitive toggle, Replace/Replace All for editable grids
+- FK dropdowns — when editing a foreign key column, dropdown shows referenced values fetched via SELECT DISTINCT, with search filtering and keyboard navigation
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -346,13 +352,13 @@ Separate repository — SvelteKit static site deployed to Vercel/Netlify/Cloudfl
 - [x] **Schema cache LRU eviction**: Bounded detail cache at 200 entries per connection, prevents unbounded memory growth
 - [x] **Startup time optimization**: Parallelized store initialization and window/session restore with Promise.all
 
-### Phase 19: Data Editing UX Polish
-- [ ] **Multi-cell selection**: Click-drag range select like a spreadsheet
-- [ ] **Drag-fill cells**: Drag corner handle to fill pattern down/across
-- [ ] **Paste from Excel/CSV into grid**: Parse clipboard tabular data and insert into cells
-- [ ] **Find & replace within result set**: Search and replace values in the current grid view
-- [ ] **Column-level copy**: Click column header to select and copy entire column
-- [ ] **Foreign key dropdowns**: Show referenced values as dropdown options when editing FK columns
+### Phase 19: Data Editing UX Polish ✅
+- [x] **Multi-cell selection**: Click-drag range select like a spreadsheet
+- [x] **Drag-fill cells**: Drag corner handle to fill pattern down/across
+- [x] **Paste from Excel/CSV into grid**: Parse clipboard tabular data and insert into cells
+- [x] **Find & replace within result set**: Search and replace values in the current grid view
+- [x] **Column-level copy**: Click column header to select and copy entire column
+- [x] **Foreign key dropdowns**: Show referenced values as dropdown options when editing FK columns
 
 ### Phase 20: Visual Database Tools
 - [ ] **ER diagram viewer**: Interactive entity-relationship diagram showing table relationships with zoom/pan

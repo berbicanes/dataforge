@@ -63,6 +63,40 @@ class ChangeTracker {
     this.tabData = { ...this.tabData };
   }
 
+  addCellEditBatch(tabId: string, edits: Array<{ rowIndex: number; colIndex: number; oldValue: string; newValue: string; isNull?: boolean }>) {
+    const data = this.getOrCreate(tabId);
+    const batchChanges: Change[] = [];
+
+    for (const edit of edits) {
+      const change: CellChange = {
+        type: 'cell_edit',
+        rowIndex: edit.rowIndex,
+        colIndex: edit.colIndex,
+        oldValue: edit.oldValue,
+        newValue: edit.newValue,
+        isNull: edit.isNull,
+      };
+
+      const existingIdx = data.changes.findIndex(
+        c => c.type === 'cell_edit' && c.rowIndex === edit.rowIndex && c.colIndex === edit.colIndex
+      );
+      if (existingIdx >= 0) {
+        const existing = data.changes[existingIdx] as CellChange;
+        change.oldValue = existing.oldValue;
+        data.changes[existingIdx] = change;
+      } else {
+        data.changes.push(change);
+      }
+
+      batchChanges.push(change);
+    }
+
+    // Push as single undo entry so one undo reverts the entire paste
+    data.undoStack.push(batchChanges);
+    data.redoStack = [];
+    this.tabData = { ...this.tabData };
+  }
+
   addRowInsert(tabId: string, rowIndex: number, columns: string[], values: string[]) {
     const data = this.getOrCreate(tabId);
     const change: RowInsert = { type: 'row_insert', rowIndex, columns, values };
