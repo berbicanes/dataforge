@@ -7,6 +7,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.2.2',
+    date: '2026-02-24',
+    highlights: [
+      'Fix app icon missing from Linux packages',
+      'Auto-publish releases (no more draft)',
+      'Automate website version and changelog updates on release',
+      'Remove open source and GitHub references from website',
+    ],
+    category: 'fix',
+  },
+  {
     version: '0.2.1',
     date: '2026-02-23',
     highlights: [

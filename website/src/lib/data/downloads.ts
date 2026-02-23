@@ -1,4 +1,4 @@
-export const VERSION = '0.2.1';
+export const VERSION = '0.2.2';
 const BASE_URL = `https://github.com/berbicanes/queryark/releases/latest/download`;
 
 export interface DownloadOption {
