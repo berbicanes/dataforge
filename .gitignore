@@ -16,5 +16,7 @@ vite.config.ts.timestamp-*
 playwright-report/
 test-results/
 
-# Website (separate deployment)
-website/
+# Website build output
+website/build/
+website/.svelte-kit/
+website/node_modules/
