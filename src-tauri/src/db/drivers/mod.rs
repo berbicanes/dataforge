@@ -15,8 +15,5 @@ pub mod dynamodb;
 #[cfg(feature = "oracle")]
 pub mod oracle;
 
-#[cfg(feature = "snowflake")]
 pub mod snowflake;
-
-#[cfg(feature = "bigquery")]
 pub mod bigquery;

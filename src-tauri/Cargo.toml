@@ -45,10 +45,11 @@ clickhouse = { version = "0.13", features = ["lz4"] }
 oracle = { version = "0.6", optional = true, features = ["chrono"] }
 
 # Snowflake
-snowflake-api = { version = "0.10", optional = true }
+snowflake-api = "0.10"
+arrow = { version = "53", default-features = false, features = ["json"] }
 
 # BigQuery
-gcp-bigquery-client = { version = "0.22", optional = true }
+gcp-bigquery-client = "0.22"
 
 # MongoDB
 mongodb = "3.1"
@@ -85,5 +86,3 @@ futures = "0.3"
 [features]
 default = []
 oracle = ["dep:oracle"]
-snowflake = ["dep:snowflake-api"]
-bigquery = ["dep:gcp-bigquery-client"]

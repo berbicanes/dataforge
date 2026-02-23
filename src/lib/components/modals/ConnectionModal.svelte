@@ -34,6 +34,8 @@
   let awsRegion = $state('us-east-1');
   let awsAccessKey = $state('');
   let awsSecretKey = $state('');
+  // BigQuery
+  let bigqueryCredentials = $state('');
   // Group
   let group = $state('');
   // Color
@@ -226,6 +228,8 @@
     // Snowflake-specific
     if (dbType === 'Snowflake') {
       config.snowflake_account = snowflakeAccount;
+      config.username = username;
+      config.password = password;
       if (snowflakeWarehouse) config.snowflake_warehouse = snowflakeWarehouse;
       if (snowflakeRole) config.snowflake_role = snowflakeRole;
     }
@@ -252,6 +256,13 @@
     // BigQuery-specific
     if (dbType === 'BigQuery') {
       if (database) config.database = database;
+      if (bigqueryCredentials.trim()) {
+        config.cloud_auth = {
+          GcpServiceAccount: {
+            credentials_json: bigqueryCredentials.trim(),
+          },
+        };
+      }
     }
 
     // SSH tunneling
@@ -314,6 +325,14 @@
     }
     if (dbType === 'Snowflake' && !snowflakeAccount.trim()) {
       uiStore.showError('Snowflake account is required');
+      return;
+    }
+    if (dbType === 'BigQuery' && !database.trim()) {
+      uiStore.showError('BigQuery project ID is required');
+      return;
+    }
+    if (dbType === 'BigQuery' && !bigqueryCredentials.trim()) {
+      uiStore.showError('BigQuery service account credentials are required');
       return;
     }
 
@@ -589,6 +608,40 @@
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label for="conn-sf-user">Username</label>
+            <input
+              id="conn-sf-user"
+              type="text"
+              bind:value={username}
+              placeholder="user"
+            />
+          </div>
+          <div class="form-group">
+            <label for="conn-sf-pass">Password</label>
+            <div class="password-row">
+              <input
+                id="conn-sf-pass"
+                type="password"
+                bind:value={password}
+                placeholder="********"
+              />
+              {#if keychainAvailable}
+                <label class="keychain-toggle" title="Store password in OS keychain">
+                  <input type="checkbox" bind:checked={useKeychain} />
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                  </svg>
+                </label>
+              {/if}
+            </div>
+            {#if useKeychain}
+              <span class="field-hint">Password stored in OS keychain</span>
+            {/if}
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label for="conn-sf-warehouse">Warehouse</label>
             <input
               id="conn-sf-warehouse"
@@ -650,6 +703,19 @@
               placeholder="********"
             />
           </div>
+        </div>
+      {/if}
+
+      {#if dbType === 'BigQuery'}
+        <div class="form-group">
+          <label for="conn-bq-creds">Service Account JSON</label>
+          <textarea
+            id="conn-bq-creds"
+            bind:value={bigqueryCredentials}
+            placeholder='Paste service account JSON key...'
+            rows="5"
+            class="credentials-textarea"
+          ></textarea>
         </div>
       {/if}
 
@@ -1171,5 +1237,12 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  .credentials-textarea {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    resize: vertical;
+    min-height: 80px;
   }
 </style>

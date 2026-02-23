@@ -259,7 +259,7 @@ export const DB_METADATA: Record<DatabaseType, DbMetadata> = {
 export const DB_GROUPS: { name: string; types: DatabaseType[] }[] = [
   {
     name: 'SQL',
-    types: ['PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'MSSQL', 'Oracle', 'CockroachDB'],
+    types: ['PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'MSSQL', 'CockroachDB'],
   },
   {
     name: 'Analytics',

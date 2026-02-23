@@ -7,7 +7,7 @@ A desktop database management tool built with **Tauri 2 (Rust)** + **SvelteKit 5
 - **Desktop runtime**: Tauri 2 (Rust backend)
 - **Frontend**: SvelteKit 5 with Svelte 5 runes, TypeScript
 - **SQL Editor**: CodeMirror 6 (SQL highlighting, autocomplete, One Dark theme)
-- **Database drivers**: sqlx (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift), tiberius (MSSQL), clickhouse, mongodb, scylla (Cassandra/ScyllaDB), redis, neo4rs (Neo4j), aws-sdk-dynamodb (DynamoDB)
+- **Database drivers**: sqlx (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift), tiberius (MSSQL), clickhouse, snowflake-api (Snowflake), gcp-bigquery-client (BigQuery), mongodb, scylla (Cassandra/ScyllaDB), redis, neo4rs (Neo4j), aws-sdk-dynamodb (DynamoDB)
 - **State persistence**: @tauri-apps/plugin-store (JSON file)
 - **Styling**: CSS variables, dark theme only, JetBrains Mono / Inter fonts
 
@@ -18,7 +18,9 @@ A desktop database management tool built with **Tauri 2 (Rust)** + **SvelteKit 5
 | SQL | PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift | sqlx |
 | SQL | MSSQL | tiberius + bb8 |
 | SQL | ClickHouse | clickhouse (HTTP) |
-| SQL (stubs) | Oracle, Snowflake, BigQuery | Feature-gated, not yet implemented |
+| Analytics | Snowflake | snowflake-api (REST) |
+| Analytics | BigQuery | gcp-bigquery-client (REST) |
+| SQL (stub) | Oracle | Feature-gated, not yet implemented |
 | NoSQL — Document | MongoDB, DynamoDB | mongodb, aws-sdk-dynamodb |
 | NoSQL — Wide Column | Cassandra, ScyllaDB | scylla |
 | NoSQL — Key-Value | Redis | redis |
@@ -121,7 +123,7 @@ npm run check            # TypeScript/Svelte type checking
 ## Current State (v0.2.0)
 
 ### What works:
-- Connect to 14 database engines (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift, MSSQL, ClickHouse, MongoDB, Cassandra/ScyllaDB, Redis, Neo4j, DynamoDB)
+- Connect to 16 database engines (PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, Redshift, MSSQL, ClickHouse, Snowflake, BigQuery, MongoDB, Cassandra/ScyllaDB, Redis, Neo4j, DynamoDB)
 - Dynamic connection modal with grouped database selector and conditional fields per database type
 - Browse schemas/containers in sidebar tree (SQL: schemas > tables > columns; NoSQL: containers > items > fields)
 - Open table tabs (data view + structure view with columns/indexes/FK tabs) for SQL databases
@@ -178,8 +180,6 @@ npm run check            # TypeScript/Svelte type checking
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
-- Snowflake (`cargo build --features snowflake`)
-- BigQuery (`cargo build --features bigquery`)
 
 ### Known issues to fix:
 - **SQL injection risk**: update_cell, insert_row, delete_rows use string concatenation instead of parameterized queries
@@ -253,10 +253,9 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Split panes**: View multiple tabs side by side
 - [x] **Global search**: Ctrl+P to search tables, queries, connections
 
-### Phase 8: Complete Stub Databases
-- [ ] **Oracle**: Implement full driver using oracle crate (requires Oracle Instant Client)
-- [ ] **Snowflake**: Implement full driver using snowflake-api crate (REST-based)
-- [ ] **BigQuery**: Implement full driver using gcp-bigquery-client crate (REST-based)
+### Phase 8: Complete Stub Databases ✅
+- [x] **Snowflake**: Full driver using snowflake-api crate (REST + Arrow), schema browsing via SHOW commands, DML via standard SQL
+- [x] **BigQuery**: Full driver using gcp-bigquery-client crate (REST), schema browsing via client API, DML via standard SQL
 
 ### Phase 9: Global Shortcuts & Tab Management ✅
 - [x] **Global keyboard shortcuts**: Ctrl+N (new query tab), Ctrl+W (close tab), Ctrl+Tab/Ctrl+Shift+Tab (cycle tabs), Ctrl+S (save query), F5 (refresh schema), Ctrl+B (toggle sidebar)

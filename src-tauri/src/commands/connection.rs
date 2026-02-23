@@ -64,23 +64,13 @@ async fn create_driver_handle(config: &ConnectionConfig) -> Result<DriverHandle,
         DatabaseType::Oracle => {
             Err(AppError::UnsupportedOperation("Oracle support requires the 'oracle' feature".into()))
         }
-        #[cfg(feature = "snowflake")]
         DatabaseType::Snowflake => {
             let driver = drivers::snowflake::SnowflakeDriver::connect(config).await?;
             Ok(DriverHandle::Sql(Arc::new(driver)))
         }
-        #[cfg(not(feature = "snowflake"))]
-        DatabaseType::Snowflake => {
-            Err(AppError::UnsupportedOperation("Snowflake support requires the 'snowflake' feature".into()))
-        }
-        #[cfg(feature = "bigquery")]
         DatabaseType::BigQuery => {
             let driver = drivers::bigquery::BigQueryDriver::connect(config).await?;
             Ok(DriverHandle::Sql(Arc::new(driver)))
-        }
-        #[cfg(not(feature = "bigquery"))]
-        DatabaseType::BigQuery => {
-            Err(AppError::UnsupportedOperation("BigQuery support requires the 'bigquery' feature".into()))
         }
         DatabaseType::Cassandra | DatabaseType::ScyllaDB => {
             let driver = drivers::cassandra::CassandraDriver::connect(config).await?;
