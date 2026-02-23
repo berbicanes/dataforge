@@ -7,6 +7,7 @@
   import { storeKeychainPassword, getKeychainPassword, checkKeychainAvailable, storeKeychainSecret } from '$lib/services/tauri';
   import type { ConnectionConfig, DatabaseType } from '$lib/types/connection';
   import { DB_METADATA, DB_GROUPS } from '$lib/types/database';
+  import { errorMessage } from '$lib/utils/formatters';
 
   let editConnection = $state<ConnectionConfig | null>(null);
 
@@ -371,8 +372,7 @@
       await connectionService.saveConnection(config);
       uiStore.closeConnectionModal();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      uiStore.showError(`Failed to save connection: ${message}`);
+      uiStore.showError(`Failed to save connection: ${errorMessage(err)}`);
     } finally {
       isSaving = false;
     }

@@ -14,10 +14,11 @@
   import { DB_METADATA } from '$lib/types/database';
   import type { Tab } from '$lib/types/tabs';
   import type { QueryResponse, SortColumn, CellValue } from '$lib/types/query';
-  import { extractCellValue } from '$lib/utils/formatters';
+  import { extractCellValue, errorMessage as extractErrorMessage } from '$lib/utils/formatters';
   import { buildSqlNamespace, splitStatements, parseErrorPosition, buildExplainQuery } from '$lib/utils/sqlHelpers';
   import SqlEditor from '$lib/components/editor/SqlEditor.svelte';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
+  import CellInspector from '$lib/components/grid/CellInspector.svelte';
   import Pagination from '$lib/components/grid/Pagination.svelte';
   import ExportMenu from '$lib/components/grid/ExportMenu.svelte';
   import QueryHistory from '$lib/components/editor/QueryHistory.svelte';
@@ -75,6 +76,37 @@
   let originalSql = $state<Record<number, string>>({});
   let totalRowCounts = $state<Record<number, number | null>>({});
   let pageLoading = $state<Record<number, boolean>>({});
+
+  // Cell inspector
+  let showInspector = $state(false);
+  let inspectorResultIdx = $state<number>(0);
+  let inspectorRow = $state<number | null>(null);
+  let inspectorCol = $state<number | null>(null);
+  let inspectorCell = $derived.by(() => {
+    if (inspectorRow === null || inspectorCol === null) return null;
+    const r = results[inspectorResultIdx];
+    if (!r) return null;
+    const paginatedRows = getPaginatedRows(inspectorResultIdx);
+    return paginatedRows[inspectorRow]?.[inspectorCol] ?? null;
+  });
+  let inspectorColumn = $derived.by(() => {
+    if (inspectorCol === null) return null;
+    const r = results[inspectorResultIdx];
+    return r?.columns[inspectorCol] ?? null;
+  });
+
+  function handleActiveCellChange(resultIndex: number, rowIndex: number, colIndex: number) {
+    inspectorResultIdx = resultIndex;
+    inspectorRow = rowIndex;
+    inspectorCol = colIndex;
+  }
+
+  function handleCellDblClick(resultIndex: number, rowIndex: number, colIndex: number) {
+    inspectorResultIdx = resultIndex;
+    inspectorRow = rowIndex;
+    inspectorCol = colIndex;
+    showInspector = true;
+  }
 
   function getPagination(i: number) {
     return paginationState[i] ?? { page: 1, pageSize: settingsStore.defaultPageSize };
@@ -326,7 +358,7 @@
         }
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = extractErrorMessage(err);
       errorMessage = msg;
 
       // Try to highlight the error position
@@ -444,7 +476,7 @@
     try {
       await tauri.cancelQuery(activeQueryId);
     } catch (err) {
-      uiStore.showError(`Failed to cancel query: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Failed to cancel query: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -538,7 +570,7 @@
       transactionStore.setInTransaction(tab.connectionId, true);
       uiStore.showSuccess('Transaction started');
     } catch (err) {
-      uiStore.showError(`Failed to begin transaction: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Failed to begin transaction: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -548,7 +580,7 @@
       transactionStore.setInTransaction(tab.connectionId, false);
       uiStore.showSuccess('Transaction committed');
     } catch (err) {
-      uiStore.showError(`Failed to commit: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Failed to commit: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -558,7 +590,7 @@
       transactionStore.setInTransaction(tab.connectionId, false);
       uiStore.showSuccess('Transaction rolled back');
     } catch (err) {
-      uiStore.showError(`Failed to rollback: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Failed to rollback: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -575,7 +607,7 @@
         showPlan = true;
       }
     } catch (err) {
-      uiStore.showError(`Explain failed: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Explain failed: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -767,6 +799,17 @@
               <rect x="1" y="8" width="3" height="7" rx="0.5" /><rect x="6" y="4" width="3" height="11" rx="0.5" /><rect x="11" y="1" width="3" height="14" rx="0.5" />
             </svg>
           </button>
+          <button
+            class="view-btn"
+            class:active={showInspector}
+            onclick={() => { showInspector = !showInspector; }}
+            title="Toggle Cell Inspector"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="1" y="1" width="14" height="14" rx="1.5" />
+              <line x1="10" y1="1" x2="10" y2="15" />
+            </svg>
+          </button>
         </div>
         <div class="toolbar-separator"></div>
         <!-- Phase 22: Compare button -->
@@ -857,66 +900,78 @@
         <span>{errorMessage}</span>
       </div>
     {:else if results.length > 0}
-      <div class="results-container">
-        {#if resultView === 'chart'}
-          <!-- Phase 22: Chart view -->
-          <ChartPanel
-            columns={results[0].columns}
-            rows={results[0].rows}
-          />
-        {:else}
-          {#each results as result, i (i)}
-            {#if results.length > 1}
-              <div class="result-label">
-                <span>Statement {i + 1}</span>
-                <span class="result-meta">{result.row_count} rows, {result.execution_time_ms}ms</span>
+      <div class="results-with-inspector">
+        <div class="results-container">
+          {#if resultView === 'chart'}
+            <!-- Phase 22: Chart view -->
+            <ChartPanel
+              columns={results[0].columns}
+              rows={results[0].rows}
+            />
+          {:else}
+            {#each results as result, i (i)}
+              {#if results.length > 1}
+                <div class="result-label">
+                  <span>Statement {i + 1}</span>
+                  <span class="result-meta">{result.row_count} rows, {result.execution_time_ms}ms</span>
+                </div>
+              {/if}
+              {#if serverPaginated[i]}
+                <div class="server-pagination-info">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  Server-paginated — {totalRowCounts[i] != null ? `${totalRowCounts[i]!.toLocaleString()} total rows` : 'counting rows...'}
+                  {#if pageLoading[i]}
+                    <span class="page-spinner"></span>
+                  {/if}
+                </div>
+              {:else if result.truncated}
+                <div class="truncation-warning">
+                  Results limited to {result.max_rows_limit?.toLocaleString()} rows. Full result set may be larger.
+                </div>
+              {/if}
+              <div class="result-grid" class:multi={results.length > 1}>
+                <DataGrid
+                  columns={result.columns}
+                  rows={getPaginatedRows(i)}
+                  sortColumns={sortColumnsMap[i] ?? []}
+                  onSort={(sorts) => handleSort(i, sorts)}
+                  onExpandCell={(rowIndex, colIndex) => handleExpandCell(i, rowIndex, colIndex)}
+                  onActiveCellChange={(rowIndex, colIndex) => handleActiveCellChange(i, rowIndex, colIndex)}
+                  onCellDblClick={(rowIndex, colIndex) => handleCellDblClick(i, rowIndex, colIndex)}
+                />
               </div>
-            {/if}
-            {#if serverPaginated[i]}
-              <div class="server-pagination-info">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
-                Server-paginated — {totalRowCounts[i] != null ? `${totalRowCounts[i]!.toLocaleString()} total rows` : 'counting rows...'}
-                {#if pageLoading[i]}
-                  <span class="page-spinner"></span>
-                {/if}
-              </div>
-            {:else if result.truncated}
-              <div class="truncation-warning">
-                Results limited to {result.max_rows_limit?.toLocaleString()} rows. Full result set may be larger.
-              </div>
-            {/if}
-            <div class="result-grid" class:multi={results.length > 1}>
-              <DataGrid
-                columns={result.columns}
-                rows={getPaginatedRows(i)}
-                sortColumns={sortColumnsMap[i] ?? []}
-                onSort={(sorts) => handleSort(i, sorts)}
-                onExpandCell={(rowIndex, colIndex) => handleExpandCell(i, rowIndex, colIndex)}
-              />
+              {#if getTotalRows(i) > 0}
+                <Pagination
+                  currentPage={getPagination(i).page}
+                  totalRows={getTotalRows(i)}
+                  pageSize={getPagination(i).pageSize}
+                  onPageChange={(page) => handlePageChange(i, page)}
+                  onPageSizeChange={(size) => handlePageSizeChange(i, size)}
+                />
+              {/if}
+            {/each}
+          {/if}
+          {#if errorMessage}
+            <div class="error-state partial">
+              <span class="error-icon">!</span>
+              <span>{errorMessage}</span>
             </div>
-            {#if getTotalRows(i) > 0}
-              <Pagination
-                currentPage={getPagination(i).page}
-                totalRows={getTotalRows(i)}
-                pageSize={getPagination(i).pageSize}
-                onPageChange={(page) => handlePageChange(i, page)}
-                onPageSizeChange={(size) => handlePageSizeChange(i, size)}
-              />
-            {/if}
-          {/each}
+          {/if}
+          <!-- Phase 22: Index suggestions -->
+          <IndexSuggestions suggestions={indexSuggestions} connectionId={tab.connectionId} />
+        </div>
+        {#if showInspector}
+          <CellInspector
+            cell={inspectorCell}
+            column={inspectorColumn}
+            rowIndex={inspectorRow}
+            onClose={() => { showInspector = false; }}
+          />
         {/if}
-        {#if errorMessage}
-          <div class="error-state partial">
-            <span class="error-icon">!</span>
-            <span>{errorMessage}</span>
-          </div>
-        {/if}
-        <!-- Phase 22: Index suggestions -->
-        <IndexSuggestions suggestions={indexSuggestions} connectionId={tab.connectionId} />
       </div>
     {:else if showPlan && planResult}
       <div class="plan-container">
@@ -1038,11 +1093,19 @@
     min-height: 60px;
   }
 
+  .results-with-inspector {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+  }
+
   .results-container {
     display: flex;
     flex-direction: column;
+    flex: 1;
     height: 100%;
     overflow-y: auto;
+    min-width: 0;
   }
 
   .result-label {

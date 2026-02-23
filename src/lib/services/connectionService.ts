@@ -5,6 +5,7 @@ import { uiStore } from '$lib/stores/ui.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
 import * as tauri from '$lib/services/tauri';
 import { startKeepalive, stopKeepalive } from '$lib/services/keepaliveService';
+import { errorMessage } from '$lib/utils/formatters';
 import type { ConnectionConfig, DatabaseCategory } from '$lib/types/connection';
 import { DB_METADATA } from '$lib/types/database';
 
@@ -31,7 +32,7 @@ export async function connect(config: ConnectionConfig) {
       schemaStore.setContainers(config.id, containers);
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     connectionStore.setStatus(config.id, 'error', message);
     uiStore.showError(`Connection failed: ${message}`);
   }
@@ -50,7 +51,7 @@ export async function disconnect(connectionId: string) {
       settingsStore.setLastActiveConnectionId(null);
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     uiStore.showError(`Disconnect failed: ${message}`);
   }
 }
@@ -59,7 +60,7 @@ export async function testConnectionConfig(config: ConnectionConfig): Promise<bo
   try {
     return await tauri.testConnection(config);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     uiStore.showError(`Test failed: ${message}`);
     return false;
   }

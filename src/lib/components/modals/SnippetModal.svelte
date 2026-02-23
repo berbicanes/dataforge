@@ -6,12 +6,12 @@
   import type { SnippetVariable } from '$lib/types/query';
 
   let editing = $derived(uiStore.snippetToEdit);
-  let name = $state(editing?.name ?? '');
-  let description = $state(editing?.description ?? '');
-  let sql = $state(editing?.sql ?? '');
-  let tagsInput = $state(editing?.tags?.join(', ') ?? '');
-  let scopeToConnection = $state(!!editing?.connectionId);
-  let variables = $state<SnippetVariable[]>(editing?.variables ?? []);
+  let name = $state('');
+  let description = $state('');
+  let sql = $state('');
+  let tagsInput = $state('');
+  let scopeToConnection = $state(false);
+  let variables = $state<SnippetVariable[]>([]);
 
   // Re-initialize when editing snippet changes
   $effect(() => {

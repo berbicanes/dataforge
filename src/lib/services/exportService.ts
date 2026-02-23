@@ -2,7 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog';
 import * as tauri from '$lib/services/tauri';
 import { uiStore } from '$lib/stores/ui.svelte';
 import type { ColumnDef, CellValue } from '$lib/types/query';
-import { extractCellValue, isNull } from '$lib/utils/formatters';
+import { extractCellValue, isNull, errorMessage } from '$lib/utils/formatters';
 
 export type ExportFormat = 'csv' | 'json' | 'sql';
 
@@ -55,8 +55,7 @@ export async function exportData(
     }
     uiStore.showSuccess(`Exported ${count} rows to ${format.toUpperCase()}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    uiStore.showError(`Export failed: ${message}`);
+    uiStore.showError(`Export failed: ${errorMessage(err)}`);
   }
 }
 
@@ -76,8 +75,7 @@ export async function exportDdl(
     await tauri.exportDdl(connectionId, schema, table, filePath);
     uiStore.showSuccess('DDL exported successfully');
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    uiStore.showError(`DDL export failed: ${message}`);
+    uiStore.showError(`DDL export failed: ${errorMessage(err)}`);
   }
 }
 
@@ -104,8 +102,7 @@ export async function importCsvFile(
     }
     return result.rows_imported > 0;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    uiStore.showError(`Import failed: ${message}`);
+    uiStore.showError(`Import failed: ${errorMessage(err)}`);
     return false;
   }
 }

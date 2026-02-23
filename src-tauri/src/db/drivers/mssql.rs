@@ -19,6 +19,9 @@ pub struct MssqlDriver {
 
 impl MssqlDriver {
     pub async fn connect(config: &ConnectionConfig) -> Result<Self, AppError> {
+        use tokio::net::TcpStream;
+        use tokio_util::compat::TokioAsyncWriteCompatExt;
+
         let mut tib_config = Config::new();
         tib_config.host(config.host_or_default());
         tib_config.port(config.port_or_default());
@@ -27,23 +30,64 @@ impl MssqlDriver {
             config.username_or_default(),
             config.password_or_default(),
         ));
-        tib_config.encryption(if config.use_ssl {
-            EncryptionLevel::Required
-        } else {
-            EncryptionLevel::NotSupported
-        });
+        tib_config.encryption(EncryptionLevel::Required);
         tib_config.trust_cert();
 
+        let host = config.host_or_default();
+        let port = config.port_or_default();
+        let addr = tib_config.get_addr();
+
+        // Step 1: TCP connect with explicit timeout
+        let tcp = tokio::time::timeout(
+            Duration::from_secs(15),
+            TcpStream::connect(&addr),
+        )
+        .await
+        .map_err(|_| AppError::Database(format!(
+            "TCP connection to {}:{} timed out after 15s — check firewall/network", host, port
+        )))?
+        .map_err(|e| AppError::Database(format!(
+            "TCP connection to {}:{} failed: {}", host, port, e
+        )))?;
+
+        tcp.set_nodelay(true).ok();
+
+        // Step 2: TDS + TLS handshake with explicit timeout
+        let mut client = tokio::time::timeout(
+            Duration::from_secs(30),
+            tiberius::Client::connect(tib_config.clone(), tcp.compat_write()),
+        )
+        .await
+        .map_err(|_| AppError::Database(format!(
+            "TLS/TDS handshake with {}:{} timed out after 30s — server may require specific TLS config", host, port
+        )))?
+        .map_err(|e| {
+            let msg = format!("{}", e);
+            if msg.contains("Routing") {
+                // Azure SQL redirect — handled by bb8_tiberius, not here
+                AppError::Database(format!("Azure redirect from {}:{} — {}", host, port, msg))
+            } else {
+                AppError::Database(format!("MSSQL login to {}:{} failed: {}", host, port, msg))
+            }
+        })?;
+
+        // Step 3: Quick sanity check
+        client.simple_query("SELECT 1").await
+            .map_err(|e| AppError::Database(format!("MSSQL connected but test query failed: {}", e)))?;
+
+        drop(client);
+
+        // Connection works — now build the pool
         let mgr = ConnectionManager::build(tib_config)
-            .map_err(|e| AppError::Database(format!("Failed to create MSSQL connection manager: {}", e)))?;
+            .map_err(|e| AppError::Database(format!("Failed to create MSSQL pool manager: {}", e)))?;
 
         let pool = Pool::builder()
             .max_size(config.pool_max_connections)
             .idle_timeout(Some(Duration::from_secs(config.pool_idle_timeout_secs)))
-            .connection_timeout(Duration::from_secs(config.pool_acquire_timeout_secs))
+            .connection_timeout(Duration::from_secs(config.pool_acquire_timeout_secs.max(30)))
             .build(mgr)
             .await
-            .map_err(|e| AppError::Database(format!("Failed to connect to MSSQL: {}", e)))?;
+            .map_err(|e| AppError::Database(format!("Failed to build MSSQL pool: {}", e)))?;
 
         Ok(Self { pool })
     }

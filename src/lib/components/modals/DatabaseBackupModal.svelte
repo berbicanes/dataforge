@@ -5,6 +5,7 @@
   import { DB_METADATA } from '$lib/types/database';
   import * as tauri from '$lib/services/tauri';
   import { dumpDatabase, pickDumpFile, onDumpProgress, type DumpProgress, type DumpResult } from '$lib/services/dumpService';
+  import { errorMessage } from '$lib/utils/formatters';
 
   // Connected SQL databases for the picker
   let sqlConnections = $derived(
@@ -67,7 +68,7 @@
       const schemaList = await tauri.getSchemas(connId);
       schemas = schemaList.map(s => ({ name: s.name, checked: true }));
     } catch (err) {
-      schemaError = err instanceof Error ? err.message : String(err);
+      schemaError = errorMessage(err);
     } finally {
       loadingSchemas = false;
     }
@@ -108,7 +109,7 @@
       result = await dumpDatabase(connectionId, filePath, selectedSchemas, includeData);
       uiStore.showSuccess(`Backup complete: ${result.tables_dumped} tables, ${result.rows_dumped.toLocaleString()} rows`);
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = errorMessage(err);
     } finally {
       isRunning = false;
       if (unlistenProgress) {

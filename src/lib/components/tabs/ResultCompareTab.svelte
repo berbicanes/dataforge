@@ -9,7 +9,7 @@
   const VISIBLE_ROWS = 25;
 
   let scrollTop = $state(0);
-  let containerEl: HTMLDivElement;
+  let containerEl = $state<HTMLDivElement>(undefined!);
   let filter = $state<'all' | 'identical' | 'changed' | 'source-only' | 'target-only'>('all');
   let matchColumns = $state<number[]>([]);
 

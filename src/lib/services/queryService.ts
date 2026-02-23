@@ -3,6 +3,7 @@ import type { QueryResponse, MultiStatementResult, SortColumn, CellValue } from 
 import { uiStore } from '$lib/stores/ui.svelte';
 import { queryHistoryStore } from '$lib/stores/queryHistory.svelte';
 import { settingsStore } from '$lib/stores/settings.svelte';
+import { errorMessage } from '$lib/utils/formatters';
 
 export async function executeQuery(connectionId: string, sql: string, queryId?: string): Promise<QueryResponse | null> {
   uiStore.setLoading(true, 'Executing query...');
@@ -19,7 +20,7 @@ export async function executeQuery(connectionId: string, sql: string, queryId?: 
 
     return result;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     const elapsed = Math.round(performance.now() - startTime);
 
     queryHistoryStore.addEntry({
@@ -64,7 +65,7 @@ export async function executeStatements(
           rowCount: result.row_count,
         });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = errorMessage(err);
         const elapsed = Math.round(performance.now() - startTime);
 
         queryHistoryStore.addEntry({
@@ -96,8 +97,7 @@ export async function executeQueryPage(
   try {
     return await tauri.executeQueryPage(connectionId, sql, limit, offset, undefined, queryId, settingsStore.maxCellSize, sortColumns);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    uiStore.showError(`Page fetch error: ${message}`);
+    uiStore.showError(`Page fetch error: ${errorMessage(err)}`);
     return null;
   }
 }
@@ -114,8 +114,7 @@ export async function fetchFullCell(connectionId: string, sql: string, column: s
   try {
     return await tauri.fetchFullCell(connectionId, sql, column, rowOffset);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    uiStore.showError(`Failed to fetch full cell: ${message}`);
+    uiStore.showError(`Failed to fetch full cell: ${errorMessage(err)}`);
     return null;
   }
 }

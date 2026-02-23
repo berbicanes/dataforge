@@ -1,4 +1,4 @@
-import { load, Store } from '@tauri-apps/plugin-store';
+import { load, type Store } from '@tauri-apps/plugin-store';
 import { checkKeychainAvailable, storeKeychainPassword, storeKeychainSecret } from '$lib/services/tauri';
 import type { ConnectionConfig, ConnectionState, ConnectionStatus } from '$lib/types/connection';
 

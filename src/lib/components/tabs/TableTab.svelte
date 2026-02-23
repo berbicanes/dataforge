@@ -9,8 +9,9 @@
   import type { Tab } from '$lib/types/tabs';
   import type { QueryResponse, SortColumn, FilterCondition } from '$lib/types/query';
   import type { ForeignKeyInfo } from '$lib/types/schema';
-  import { extractCellValue } from '$lib/utils/formatters';
+  import { extractCellValue, errorMessage } from '$lib/utils/formatters';
   import DataGrid from '$lib/components/grid/DataGrid.svelte';
+  import CellInspector from '$lib/components/grid/CellInspector.svelte';
   import Pagination from '$lib/components/grid/Pagination.svelte';
   import ExportMenu from '$lib/components/grid/ExportMenu.svelte';
   import TableStructure from '$lib/components/structure/TableStructure.svelte';
@@ -34,8 +35,7 @@
   let sortColumns = $state<SortColumn[]>([]);
   let filters = $state<FilterCondition[]>([]);
 
-  // Bulk edit mode
-  let bulkEditMode = $state(false);
+  // Change tracking (TablePlus-style: edits are staged, then committed with Apply)
   let hasChanges = $derived(changeTracker.hasChanges(tab.id));
   let changeCount = $derived(changeTracker.changeCount(tab.id));
   let canUndo = $derived(changeTracker.canUndo(tab.id));
@@ -43,7 +43,6 @@
 
   // Modified cells map for visual indicators
   let modifiedCells = $derived.by(() => {
-    if (!bulkEditMode) return undefined;
     const map = new Map<number, Set<number>>();
     for (const change of changeTracker.getChanges(tab.id)) {
       if (change.type === 'cell_edit') {
@@ -51,16 +50,15 @@
         map.get(change.rowIndex)!.add(change.colIndex);
       }
     }
-    return map;
+    return map.size > 0 ? map : undefined;
   });
 
   let deletedRows = $derived.by(() => {
-    if (!bulkEditMode) return undefined;
     const set = new Set<number>();
     for (const change of changeTracker.getChanges(tab.id)) {
       if (change.type === 'row_delete') set.add(change.rowIndex);
     }
-    return set;
+    return set.size > 0 ? set : undefined;
   });
 
   // Determine DB type for this connection
@@ -71,6 +69,42 @@
 
   // Foreign keys for FK dropdown
   let tableForeignKeys = $state<ForeignKeyInfo[]>([]);
+
+  // Cell inspector
+  let showInspector = $state(false);
+  let inspectorRow = $state<number | null>(null);
+  let inspectorCol = $state<number | null>(null);
+  let inspectorCell = $derived.by(() => {
+    if (inspectorRow === null || inspectorCol === null || !result) return null;
+    return result.rows[inspectorRow]?.[inspectorCol] ?? null;
+  });
+  let inspectorColumn = $derived.by(() => {
+    if (inspectorCol === null || !result) return null;
+    return result.columns[inspectorCol] ?? null;
+  });
+
+  function handleActiveCellChange(rowIndex: number, colIndex: number) {
+    inspectorRow = rowIndex;
+    inspectorCol = colIndex;
+  }
+
+  function handleCellDblClick(rowIndex: number, colIndex: number) {
+    inspectorRow = rowIndex;
+    inspectorCol = colIndex;
+    showInspector = true;
+  }
+
+  function handleInspectorEdit(value: string) {
+    if (inspectorRow !== null && inspectorCol !== null) {
+      handleCellEdit(inspectorRow, inspectorCol, value);
+    }
+  }
+
+  function handleInspectorSetNull() {
+    if (inspectorRow !== null && inspectorCol !== null) {
+      handleCellSetNull(inspectorRow, inspectorCol);
+    }
+  }
 
   let offset = $derived((currentPage - 1) * pageSize);
 
@@ -89,8 +123,7 @@
         rowCount: response.row_count
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      uiStore.showError(`Failed to load table data: ${message}`);
+      uiStore.showError(`Failed to load table data: ${errorMessage(err)}`);
     } finally {
       isLoading = false;
     }
@@ -117,32 +150,19 @@
   function handlePaste(startRow: number, startCol: number, values: string[][]) {
     if (!result) return;
 
-    if (bulkEditMode) {
-      const edits: Array<{ rowIndex: number; colIndex: number; oldValue: string; newValue: string }> = [];
-      for (let r = 0; r < values.length; r++) {
-        const targetRow = startRow + r;
-        if (targetRow >= result.rows.length) break;
-        for (let c = 0; c < values[r].length; c++) {
-          const targetCol = startCol + c;
-          if (targetCol >= result.columns.length) break;
-          const oldValue = extractCellValue(result.rows[targetRow][targetCol]);
-          edits.push({ rowIndex: targetRow, colIndex: targetCol, oldValue, newValue: values[r][c] });
-        }
+    const edits: Array<{ rowIndex: number; colIndex: number; oldValue: string; newValue: string }> = [];
+    for (let r = 0; r < values.length; r++) {
+      const targetRow = startRow + r;
+      if (targetRow >= result.rows.length) break;
+      for (let c = 0; c < values[r].length; c++) {
+        const targetCol = startCol + c;
+        if (targetCol >= result.columns.length) break;
+        const oldValue = extractCellValue(result.rows[targetRow][targetCol]);
+        edits.push({ rowIndex: targetRow, colIndex: targetCol, oldValue, newValue: values[r][c] });
       }
-      if (edits.length > 0) {
-        changeTracker.addCellEditBatch(tab.id, edits);
-      }
-    } else {
-      // Apply directly
-      for (let r = 0; r < values.length; r++) {
-        const targetRow = startRow + r;
-        if (targetRow >= result.rows.length) break;
-        for (let c = 0; c < values[r].length; c++) {
-          const targetCol = startCol + c;
-          if (targetCol >= result.columns.length) break;
-          handleCellEdit(targetRow, targetCol, values[r][c]);
-        }
-      }
+    }
+    if (edits.length > 0) {
+      changeTracker.addCellEditBatch(tab.id, edits);
     }
   }
 
@@ -152,7 +172,7 @@
     try {
       ddlText = await tauri.exportDdl(tab.connectionId, tab.schema, tab.table);
     } catch (err) {
-      ddlText = `-- Failed to load DDL: ${err instanceof Error ? err.message : String(err)}`;
+      ddlText = `-- Failed to load DDL: ${errorMessage(err)}`;
     } finally {
       ddlLoading = false;
     }
@@ -205,67 +225,22 @@
 
   function handleCellEdit(rowIndex: number, colIndex: number, value: string) {
     if (!result || !tab.schema || !tab.table) return;
-    const columns = result.columns;
     const row = result.rows[rowIndex];
     if (!row) return;
 
-    if (bulkEditMode) {
-      const oldValue = extractCellValue(row[colIndex]);
-      changeTracker.addCellEdit(tab.id, rowIndex, colIndex, oldValue, value);
-      return;
-    }
-
-    // Use first column as PK (simplistic — matches existing behavior)
-    const pkColumns = [columns[0].name];
-    const pkCell = row[0];
-    const pkValues = [pkCell.type === 'Null' ? '' : ('value' in pkCell ? String(pkCell.value) : '')];
-    const column = columns[colIndex].name;
-
-    tauri.updateCell(tab.connectionId, tab.schema, tab.table, column, value, pkColumns, pkValues)
-      .then(() => loadData())
-      .catch(err => {
-        const message = err instanceof Error ? err.message : String(err);
-        uiStore.showError(`Failed to update cell: ${message}`);
-      });
+    const oldValue = extractCellValue(row[colIndex]);
+    // Skip if value hasn't actually changed
+    if (value === oldValue) return;
+    changeTracker.addCellEdit(tab.id, rowIndex, colIndex, oldValue, value);
   }
 
   function handleCellSetNull(rowIndex: number, colIndex: number) {
     if (!result || !tab.schema || !tab.table) return;
-    const columns = result.columns;
     const row = result.rows[rowIndex];
     if (!row) return;
 
-    if (bulkEditMode) {
-      const oldValue = extractCellValue(row[colIndex]);
-      changeTracker.addCellEdit(tab.id, rowIndex, colIndex, oldValue, '', true);
-      return;
-    }
-
-    const pkColumns = [columns[0].name];
-    const pkCell = row[0];
-    const pkValues = [pkCell.type === 'Null' ? '' : ('value' in pkCell ? String(pkCell.value) : '')];
-    const column = columns[colIndex].name;
-
-    tauri.updateCell(tab.connectionId, tab.schema, tab.table, column, '', pkColumns, pkValues, true)
-      .then(() => loadData())
-      .catch(err => {
-        const message = err instanceof Error ? err.message : String(err);
-        uiStore.showError(`Failed to set NULL: ${message}`);
-      });
-  }
-
-  function toggleBulkEdit() {
-    if (bulkEditMode && hasChanges) {
-      uiStore.confirm('Discard unsaved changes?', () => {
-        changeTracker.discard(tab.id);
-        bulkEditMode = false;
-      });
-    } else {
-      bulkEditMode = !bulkEditMode;
-      if (!bulkEditMode) {
-        changeTracker.discard(tab.id);
-      }
-    }
+    const oldValue = extractCellValue(row[colIndex]);
+    changeTracker.addCellEdit(tab.id, rowIndex, colIndex, oldValue, '', true);
   }
 
   async function applyChanges() {
@@ -308,7 +283,7 @@
         schemaStore.clearTableStats(tab.connectionId, tab.schema, tab.table);
       }
     } catch (err) {
-      uiStore.showError(`Failed to apply changes: ${err instanceof Error ? err.message : String(err)}`);
+      uiStore.showError(`Failed to apply changes: ${errorMessage(err)}`);
     } finally {
       isLoading = false;
     }
@@ -327,7 +302,13 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!bulkEditMode) return;
+    // Ctrl+S to commit changes
+    if ((e.ctrlKey || e.metaKey) && e.key === 's' && hasChanges) {
+      e.preventDefault();
+      applyChanges();
+      return;
+    }
+    if (!hasChanges) return;
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       handleUndo();
@@ -419,22 +400,25 @@
     <span class="sub-tab-title truncate">{tab.schema}.{tab.table}</span>
     {#if activeSubTab === 'data'}
       <div class="sub-tab-actions">
-        <button
-          class="sub-tab-btn"
-          class:active={bulkEditMode}
-          onclick={toggleBulkEdit}
-          title={bulkEditMode ? 'Exit bulk edit mode' : 'Enter bulk edit mode'}
-        >
-          {bulkEditMode ? 'Exit Bulk' : 'Bulk Edit'}
-        </button>
-        {#if bulkEditMode && hasChanges}
-          <span class="change-count">{changeCount}</span>
-          <button class="sub-tab-btn apply" onclick={applyChanges} title="Apply all changes">Apply</button>
+        {#if hasChanges}
+          <span class="change-count">{changeCount} pending</span>
+          <button class="sub-tab-btn apply" onclick={applyChanges} title="Commit all changes (Ctrl+S)">Commit</button>
           <button class="sub-tab-btn discard" onclick={discardChanges} title="Discard all changes">Discard</button>
           <button class="sub-tab-btn" onclick={handleUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">Undo</button>
           <button class="sub-tab-btn" onclick={handleRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">Redo</button>
         {/if}
       </div>
+      <button
+        class="sub-tab-btn"
+        class:active={showInspector}
+        onclick={() => { showInspector = !showInspector; }}
+        title="Toggle cell inspector (sidebar)"
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="1" y="1" width="14" height="14" rx="1.5" />
+          <line x1="10" y1="1" x2="10" y2="15" />
+        </svg>
+      </button>
       {#if result}
         <ExportMenu
           columns={result.columns}
@@ -473,26 +457,41 @@
             <span>Loading data...</span>
           </div>
         {:else if result}
-          <div class="grid-wrapper">
-            <DataGrid
-              columns={result.columns}
-              rows={result.rows}
-              editable={true}
-              schema={tab.schema}
-              table={tab.table}
-              {sortColumns}
-              {filters}
-              {modifiedCells}
-              {deletedRows}
-              foreignKeys={tableForeignKeys}
-              connectionId={tab.connectionId}
-              onCellEdit={handleCellEdit}
-              onCellSetNull={handleCellSetNull}
-              onSort={handleSort}
-              onFiltersChange={handleFiltersChange}
-              onFilterByValue={handleFilterByValue}
-              onPaste={handlePaste}
-            />
+          <div class="data-view-body">
+            <div class="grid-wrapper">
+              <DataGrid
+                columns={result.columns}
+                rows={result.rows}
+                editable={true}
+                schema={tab.schema}
+                table={tab.table}
+                {sortColumns}
+                {filters}
+                {modifiedCells}
+                {deletedRows}
+                foreignKeys={tableForeignKeys}
+                connectionId={tab.connectionId}
+                onCellEdit={handleCellEdit}
+                onCellSetNull={handleCellSetNull}
+                onSort={handleSort}
+                onFiltersChange={handleFiltersChange}
+                onFilterByValue={handleFilterByValue}
+                onPaste={handlePaste}
+                onActiveCellChange={handleActiveCellChange}
+                onCellDblClick={handleCellDblClick}
+              />
+            </div>
+            {#if showInspector}
+              <CellInspector
+                cell={inspectorCell}
+                column={inspectorColumn}
+                rowIndex={inspectorRow}
+                editable={true}
+                onClose={() => { showInspector = false; }}
+                onEdit={handleInspectorEdit}
+                onSetNull={handleInspectorSetNull}
+              />
+            {/if}
           </div>
           <Pagination
             {currentPage}
@@ -660,6 +659,12 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+  }
+
+  .data-view-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
   }
 
   .grid-wrapper {

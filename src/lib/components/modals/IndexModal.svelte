@@ -5,6 +5,7 @@
   import * as tauri from '$lib/services/tauri';
   import { generateCreateIndex, generateDropIndex } from '$lib/utils/ddlGenerator';
   import type { ColumnInfo, IndexInfo } from '$lib/types/schema';
+  import { errorMessage } from '$lib/utils/formatters';
 
   let ctx = $derived(uiStore.indexModalContext);
   let dbType = $derived(ctx?.dbType ?? 'PostgreSQL');
@@ -72,7 +73,7 @@
         dropIndexName = '';
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = errorMessage(err);
     } finally {
       isExecuting = false;
     }

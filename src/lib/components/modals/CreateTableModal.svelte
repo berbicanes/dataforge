@@ -3,6 +3,7 @@
   import { schemaStore } from '$lib/stores/schema.svelte';
   import * as tauri from '$lib/services/tauri';
   import { generateCreateTable, getCommonDataTypes, type ColumnSpec } from '$lib/utils/ddlGenerator';
+  import { errorMessage } from '$lib/utils/formatters';
 
   let ctx = $derived(uiStore.createTableContext);
   let dbType = $derived(ctx?.dbType ?? 'PostgreSQL');
@@ -49,7 +50,7 @@
       schemaStore.clearConnection(ctx.connectionId);
       handleClose();
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = errorMessage(err);
     } finally {
       isExecuting = false;
     }

@@ -11,12 +11,21 @@
 
   let { tab }: { tab: Tab } = $props();
 
-  let sourceConnectionId = $state(tab.connectionId);
-  let sourceSchema = $state(tab.schema ?? '');
-  let sourceTable = $state(tab.table ?? '');
-  let targetConnectionId = $state(tab.diffTargetConnectionId ?? '');
-  let targetSchema = $state(tab.diffTargetSchema ?? '');
-  let targetTable = $state(tab.diffTargetTable ?? '');
+  let sourceConnectionId = $state('');
+  let sourceSchema = $state('');
+  let sourceTable = $state('');
+  let targetConnectionId = $state('');
+  let targetSchema = $state('');
+  let targetTable = $state('');
+
+  $effect(() => {
+    sourceConnectionId = tab.connectionId;
+    sourceSchema = tab.schema ?? '';
+    sourceTable = tab.table ?? '';
+    targetConnectionId = tab.diffTargetConnectionId ?? '';
+    targetSchema = tab.diffTargetSchema ?? '';
+    targetTable = tab.diffTargetTable ?? '';
+  });
 
   let loading = $state(false);
   let diffResult = $state<DataDiffResult | null>(null);

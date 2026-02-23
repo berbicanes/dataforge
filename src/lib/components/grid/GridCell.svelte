@@ -76,7 +76,9 @@
 
   function handleSave() {
     isEditing = false;
-    if (onEdit) {
+    // Only emit edit if the value actually changed
+    const originalValue = cellIsNull ? '' : displayValue;
+    if (onEdit && editValue !== originalValue) {
       onEdit(editValue);
     }
   }

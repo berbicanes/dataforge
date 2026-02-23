@@ -5,6 +5,7 @@
   import * as tauri from '$lib/services/tauri';
   import { generateAddColumn, generateDropColumn, getCommonDataTypes, type ColumnSpec } from '$lib/utils/ddlGenerator';
   import type { ColumnInfo } from '$lib/types/schema';
+  import { errorMessage } from '$lib/utils/formatters';
 
   let ctx = $derived(uiStore.alterTableContext);
   let dbType = $derived(ctx?.dbType ?? 'PostgreSQL');
@@ -62,7 +63,7 @@
         dropColumnName = '';
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
+      error = errorMessage(err);
     } finally {
       isExecuting = false;
     }

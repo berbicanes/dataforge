@@ -31,6 +31,8 @@
     onFilterByValue,
     onExpandCell,
     onPaste,
+    onActiveCellChange,
+    onCellDblClick,
   }: {
     columns: ColumnDef[];
     rows: CellValue[][];
@@ -50,6 +52,8 @@
     onFilterByValue?: (column: string, value: string) => void;
     onExpandCell?: (rowIndex: number, colIndex: number) => void;
     onPaste?: (startRow: number, startCol: number, values: string[][]) => void;
+    onActiveCellChange?: (rowIndex: number, colIndex: number) => void;
+    onCellDblClick?: (rowIndex: number, colIndex: number) => void;
   } = $props();
 
   const ROW_HEIGHT = 32;
@@ -217,6 +221,19 @@
   });
 
   let currentMatch = $derived(searchMatches.length > 0 && currentMatchIdx >= 0 ? searchMatches[currentMatchIdx] : null);
+
+  // Notify parent when active cell changes
+  $effect(() => {
+    if (activeCell) {
+      onActiveCellChange?.(activeCell.row, originalColIndex(activeCell.col));
+    }
+  });
+
+  function handleGridDblClick() {
+    if (activeCell) {
+      onCellDblClick?.(activeCell.row, originalColIndex(activeCell.col));
+    }
+  }
 
   function handleScroll() {
     if (scrollContainer) {
@@ -999,6 +1016,7 @@
       class="grid-body"
       bind:this={scrollContainer}
       onscroll={handleScroll}
+      ondblclick={handleGridDblClick}
     >
       <div class="virtual-spacer" style="height: {totalHeight}px; position: relative;">
         <div class="virtual-rows" style="transform: translateY({offsetY}px);">

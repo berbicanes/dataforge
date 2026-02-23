@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <!-- Background: rounded square with dark navy -->
+  <rect width="1024" height="1024" rx="220" fill="#1a1b2e"/>
+
+  <!-- Subtle radial glow behind the cylinder -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="45%" r="40%">
+      <stop offset="0%" stop-color="#7aa2f7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#7aa2f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#glow)"/>
+
+  <!-- Database cylinder — scaled from 36x36 viewBox to fit ~600px centered -->
+  <!-- Original: cx=18 cy=10 rx=12 ry=5 in 36x36 → scale ~16.67x, centered at 512 -->
+  <g transform="translate(512, 460) scale(16.67)">
+    <!-- Top ellipse (lid) -->
+    <ellipse cx="0" cy="-8" rx="12" ry="5" stroke="#7aa2f7" stroke-width="2.4" fill="rgba(122, 162, 247, 0.15)"/>
+
+    <!-- Middle body -->
+    <path d="M-12 -8v8c0 2.76 5.37 5 12 5s12-2.24 12-5v-8" stroke="#7aa2f7" stroke-width="2.4" fill="none"/>
+
+    <!-- Lower body -->
+    <path d="M-12 0v8c0 2.76 5.37 5 12 5s12-2.24 12-5v-8" stroke="#7aa2f7" stroke-width="2.4" fill="none" opacity="0.55"/>
+  </g>
+</svg>

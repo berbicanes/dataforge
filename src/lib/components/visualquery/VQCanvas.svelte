@@ -166,9 +166,11 @@
 
 <svelte:window onclick={() => { joinMenu = null; }} />
 
+<!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
 <svg
   bind:this={svgEl}
   class="vq-canvas"
+  role="application"
   viewBox="{vbX} {vbY} {vbW} {vbH}"
   onmousedown={handleMouseDown}
   onmousemove={handleMouseMove}
@@ -232,7 +234,7 @@
       <!-- Columns -->
       {#each table.columns as col, i}
         {@const cy = HEADER_HEIGHT + i * COL_ROW_HEIGHT}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
         <g class="vq-col-row" style="cursor: pointer" onclick={() => handleColumnClick(table.id, col.name)}>
           <rect x="0" y={cy} width={TABLE_WIDTH} height={COL_ROW_HEIGHT} fill="transparent" />
           {#if i > 0}

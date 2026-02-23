@@ -10,6 +10,8 @@
 }
 
 :root {
+  color-scheme: dark;
+
   /* Background colors */
   --bg-primary: #1a1b2e;
   --bg-secondary: #22233a;
@@ -180,7 +182,7 @@ input, select, textarea {
   border-radius: var(--radius-sm);
   padding: var(--spacing-xs) var(--spacing-sm);
   outline: none;
-  color-scheme: dark;
+  color-scheme: inherit;
 }
 
 input:focus, select:focus, textarea:focus {

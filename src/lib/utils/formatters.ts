@@ -1,5 +1,19 @@
 import type { CellValue } from '$lib/types/query';
 
+/** Extract a readable error message from any thrown value (Error, Tauri object, string, etc.) */
+export function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    // Tauri invoke errors are often { message: "..." } or { error: "..." }
+    const obj = err as Record<string, unknown>;
+    if (typeof obj.message === 'string') return obj.message;
+    if (typeof obj.error === 'string') return obj.error;
+    try { return JSON.stringify(err); } catch { /* fall through */ }
+  }
+  return String(err);
+}
+
 export function extractCellValue(cell: CellValue): string {
   switch (cell.type) {
     case 'Null': return 'NULL';

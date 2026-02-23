@@ -72,19 +72,14 @@
   <div class="toolbar-right">
     <button
       class="btn toolbar-btn"
-      onclick={() => settingsStore.toggleTheme()}
-      title="Toggle theme (Ctrl+Shift+T)"
+      onclick={() => { uiStore.showSettingsModal = true; }}
+      title="Settings"
     >
-      {#if settingsStore.theme === 'dark'}
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/>
-          <path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-      {:else}
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-          <path d="M13.5 9.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      {/if}
+      <!-- Gear icon -->
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <path d="M6.6 1.5h2.8l.35 2.1a4.8 4.8 0 011.2.7l2-.8 1.4 2.4-1.65 1.3a4.8 4.8 0 010 1.4l1.65 1.3-1.4 2.4-2-.8a4.8 4.8 0 01-1.2.7l-.35 2.1H6.6l-.35-2.1a4.8 4.8 0 01-1.2-.7l-2 .8-1.4-2.4 1.65-1.3a4.8 4.8 0 010-1.4L1.65 5.9l1.4-2.4 2 .8a4.8 4.8 0 011.2-.7l.35-2.1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/>
+      </svg>
     </button>
 
     <button
@@ -92,9 +87,16 @@
       onclick={() => { uiStore.showShortcutsModal = true; }}
       title="Keyboard shortcuts (Ctrl+K)"
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-        <path d="M4 7h1M7 7h2M11 7h1M4 10h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      <!-- Keyboard icon -->
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="3.5" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+        <rect x="3.5" y="5.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="6" y="5.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="8.5" y="5.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="11" y="5.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="3.5" y="8.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="11" y="8.5" width="1.5" height="1.5" rx="0.3" fill="currentColor"/>
+        <rect x="6" y="8.5" width="4" height="1.5" rx="0.3" fill="currentColor"/>
       </svg>
     </button>
 
@@ -103,22 +105,31 @@
       onclick={() => { uiStore.showAboutModal = true; }}
       title="About QueryArk"
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <!-- Info circle icon -->
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/>
-        <path d="M8 7v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="8" cy="5" r="0.7" fill="currentColor"/>
+        <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="8" cy="5.2" r="0.9" fill="currentColor"/>
       </svg>
     </button>
 
     <button
       class="btn toolbar-btn"
-      onclick={() => { uiStore.showSettingsModal = true; }}
-      title="Settings"
+      onclick={() => settingsStore.toggleTheme()}
+      title="Toggle theme (Ctrl+Shift+T)"
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2"/>
-        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
+      {#if settingsStore.theme === 'dark'}
+        <!-- Sun icon -->
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.7 3.7l1.4 1.4M10.9 10.9l1.4 1.4M3.7 12.3l1.4-1.4M10.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      {:else}
+        <!-- Moon icon -->
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+          <path d="M13.5 9.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.3" fill="currentColor" fill-opacity="0.15" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      {/if}
     </button>
 
     {#if hasAnyConnections}

@@ -73,7 +73,7 @@
 <div class="chart-panel">
   <div class="chart-config">
     <div class="config-group">
-      <label class="config-label">Type</label>
+      <span class="config-label">Type</span>
       <div class="type-toggles">
         <button class="type-btn" class:active={chartType === 'bar'} onclick={() => chartType = 'bar'}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -99,7 +99,7 @@
     <div class="config-separator"></div>
 
     <div class="config-group">
-      <label class="config-label">X Axis</label>
+      <span class="config-label">X Axis</span>
       <select class="config-select" bind:value={xColumn}>
         {#each columns as col}
           <option value={col.name}>{col.name}</option>
@@ -108,7 +108,7 @@
     </div>
 
     <div class="config-group">
-      <label class="config-label">Y Axis</label>
+      <span class="config-label">Y Axis</span>
       <div class="y-columns">
         {#each columns as col}
           {#if col.name !== xColumn}
