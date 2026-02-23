@@ -8,13 +8,13 @@
 
 <svelte:head>
   <title>Download QueryArk — Database IDE for macOS, Windows, Linux</title>
-  <meta name="description" content="Download QueryArk for macOS, Windows, or Linux. Free, open source database IDE supporting 16 engines." />
+  <meta name="description" content="Download QueryArk for macOS, Windows, or Linux. A fast, lightweight database IDE supporting 16 engines." />
   <link rel="canonical" href="https://queryark.com/download" />
   <meta property="og:title" content="Download QueryArk — Database IDE for macOS, Windows, Linux" />
-  <meta property="og:description" content="Download QueryArk for macOS, Windows, or Linux. Free, open source database IDE supporting 16 engines." />
+  <meta property="og:description" content="Download QueryArk for macOS, Windows, or Linux. A fast, lightweight database IDE supporting 16 engines." />
   <meta property="og:url" content="https://queryark.com/download" />
   <meta name="twitter:title" content="Download QueryArk" />
-  <meta name="twitter:description" content="Download QueryArk for macOS, Windows, or Linux. Free, open source database IDE supporting 16 engines." />
+  <meta name="twitter:description" content="Download QueryArk for macOS, Windows, or Linux. A fast, lightweight database IDE supporting 16 engines." />
 </svelte:head>
 
 <section class="download-page">
@@ -23,7 +23,7 @@
       <span class="version-badge">v{version}</span>
       <h1 class="page-title">Download QueryArk</h1>
       <p class="page-subtitle">
-        Free and open source. Available for macOS, Windows, and Linux.
+        Available for macOS, Windows, and Linux.
       </p>
     </div>
 
@@ -43,27 +43,6 @@
         </ul>
       </div>
 
-      <div class="info-section">
-        <h3>Build from Source</h3>
-        <div class="code-block">
-          <code>git clone https://github.com/berbicanes/queryark.git</code>
-          <code>cd queryark</code>
-          <code>npm install</code>
-          <code>npm run tauri build</code>
-        </div>
-        <p class="code-note">
-          Requires <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js 20+</a>,
-          <a href="https://www.rust-lang.org/tools/install" target="_blank" rel="noopener">Rust</a>,
-          and <a href="https://v2.tauri.app/start/prerequisites" target="_blank" rel="noopener">Tauri prerequisites</a>.
-        </p>
-      </div>
-
-      <div class="info-section">
-        <h3>Previous Releases</h3>
-        <p>
-          All releases are available on <a href="https://github.com/berbicanes/queryark/releases" target="_blank" rel="noopener">GitHub Releases</a>.
-        </p>
-      </div>
     </div>
   </div>
 </section>
@@ -154,40 +133,6 @@
 
   .info-section li strong {
     color: var(--text-primary);
-  }
-
-  .code-block {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-  }
-
-  .code-block code {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--text-primary);
-    line-height: 1.6;
-  }
-
-  .code-block code::before {
-    content: '$ ';
-    color: var(--text-muted);
-  }
-
-  .code-note {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-
-  .info-section p {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.5;
   }
 
   @media (max-width: 900px) {

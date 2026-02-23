@@ -22,12 +22,6 @@
         <a href="/changelog">Changelog</a>
       </div>
       <div class="link-group">
-        <h4>Resources</h4>
-        <a href="https://github.com/berbicanes/queryark" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/berbicanes/queryark/issues" target="_blank" rel="noopener">Issues</a>
-        <a href="https://github.com/berbicanes/queryark/releases" target="_blank" rel="noopener">Releases</a>
-      </div>
-      <div class="link-group">
         <h4>Built With</h4>
         <span>Tauri 2 + Rust</span>
         <span>SvelteKit 5</span>
@@ -37,7 +31,7 @@
   </div>
 
   <div class="footer-bottom container">
-    <span>&copy; {new Date().getFullYear()} QueryArk. MIT License.</span>
+    <span>&copy; {new Date().getFullYear()} QueryArk. All rights reserved.</span>
   </div>
 </footer>
 

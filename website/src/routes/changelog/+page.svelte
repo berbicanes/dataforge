@@ -46,12 +46,6 @@
       {/each}
     </div>
 
-    <div class="all-releases">
-      <p>
-        All releases are available on
-        <a href="https://github.com/berbicanes/queryark/releases" target="_blank" rel="noopener">GitHub Releases</a>.
-      </p>
-    </div>
   </div>
 </section>
 
@@ -207,13 +201,6 @@
     border-radius: 50%;
     background: var(--accent);
     opacity: 0.6;
-  }
-
-  .all-releases {
-    text-align: center;
-    margin-top: 64px;
-    font-size: 14px;
-    color: var(--text-secondary);
   }
 
   @media (max-width: 768px) {
