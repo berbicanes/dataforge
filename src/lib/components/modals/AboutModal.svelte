@@ -10,7 +10,7 @@
       appVersion = await getVersion();
     } catch {
       // Fallback if not running in Tauri
-      appVersion = '0.2.0';
+      appVersion = '0.2.1';
     }
   });
 

@@ -7,6 +7,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.2.1',
+    date: '2026-02-23',
+    highlights: [
+      'Welcome screen redesign with improved onboarding',
+      'Cell inspector sidebar for viewing large values',
+      'MSSQL Azure connection fix',
+      'Database backup/dump to .sql file with progress tracking',
+      'Schema selector with multi-schema visibility',
+      'Schema context menu (create/drop schema, new query)',
+      'Cross-schema query support',
+      'Performance & reliability improvements (keepalive, virtual tree, LRU cache)',
+      'Multi-cell selection, drag-fill, paste from Excel/CSV',
+      'ER diagram viewer, visual query builder, table/data diff',
+      'Query result charts, parameterized queries, query profiling',
+      'Config auto-backup, crash reporting, E2E test scaffolding',
+    ],
+    category: 'feature',
+  },
+  {
     version: '0.2.0',
     date: '2026-02-23',
     highlights: [

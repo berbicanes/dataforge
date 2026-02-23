@@ -25,7 +25,7 @@
       const { getVersion } = await import('@tauri-apps/api/app');
       appVersion = await getVersion();
     } catch {
-      appVersion = '0.2.0';
+      appVersion = '0.2.1';
     }
   });
 </script>

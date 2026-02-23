@@ -3,7 +3,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import { CHANGELOG, type ChangelogEntry } from '$lib/types/changelog';
 
-  let appVersion = $state('0.2.0');
+  let appVersion = $state('0.2.1');
 
   // Show entries newer than lastSeenVersion
   const newEntries = $derived(() => {
@@ -60,7 +60,7 @@
       const { getVersion } = await import('@tauri-apps/api/app');
       appVersion = await getVersion();
     } catch {
-      appVersion = '0.2.0';
+      appVersion = '0.2.1';
     }
   });
 </script>
