@@ -189,6 +189,7 @@
     height: 100%;
     gap: 8px;
     user-select: none;
+    position: relative;
     background:
       radial-gradient(ellipse 80% 60% at 50% 40%, rgba(122, 162, 247, 0.06) 0%, transparent 70%),
       var(--bg-primary);
@@ -420,7 +421,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 32px;
+    position: absolute;
+    bottom: 16px;
     font-size: 11px;
     color: var(--text-secondary);
     opacity: 0.7;

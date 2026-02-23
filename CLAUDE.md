@@ -288,7 +288,7 @@ npm run check            # TypeScript/Svelte type checking
 - [x] **Confirmation dialogs for destructive actions**: Confirm before DROP TABLE, bulk DELETE rows, disconnect with unsaved changes, close tabs with unsaved queries
 - [x] **Empty states & onboarding**: First-launch experience with "Connect your first database" prompt, empty state illustrations for no connections/no tabs/no results
 - [x] **About screen**: Version info, license, links to repo/docs/support
-- [ ] **App icon & branding**: Production app icon, splash screen, proper window title
+- [x] **App icon & branding**: Production app icon (navy + cyan magnifying glass over database grid), QueryArk rename across all files, keychain migration fallback
 
 ### Phase 14: Secure Connections ✅
 - [x] **SSH tunneling**: Connect through SSH tunnel (local port forwarding) via russh, UI fields for SSH host/port/user/key/password, TunnelManager with bidirectional TCP forwarding
@@ -328,6 +328,57 @@ Separate repository — SvelteKit static site deployed to Vercel/Netlify/Cloudfl
 - [ ] **SEO & metadata**: Open Graph tags, Twitter cards, structured data, sitemap.xml, robots.txt
 - [ ] **Analytics**: Privacy-friendly analytics (Plausible/Umami) for download counts and page views
 - [ ] **Responsive design**: Mobile-friendly layout for all pages, dark theme matching the app aesthetic
+
+### Phase 18: Performance & Reliability
+- [ ] **Stress testing with large schemas**: Test with 1000+ tables, ensure sidebar/tree doesn't lag
+- [ ] **Virtual scrolling for schema tree**: Render only visible tree nodes for databases with hundreds of tables
+- [ ] **Connection keepalive & auto-reconnect**: Detect network interruptions, reconnect transparently without losing context
+- [ ] **Memory profiling**: Detect and fix leaks on long-running sessions (Rust + frontend)
+- [ ] **Startup time optimization**: Lazy-load database drivers, defer non-critical initialization
+
+### Phase 19: Data Editing UX Polish
+- [ ] **Multi-cell selection**: Click-drag range select like a spreadsheet
+- [ ] **Drag-fill cells**: Drag corner handle to fill pattern down/across
+- [ ] **Paste from Excel/CSV into grid**: Parse clipboard tabular data and insert into cells
+- [ ] **Find & replace within result set**: Search and replace values in the current grid view
+- [ ] **Column-level copy**: Click column header to select and copy entire column
+- [ ] **Foreign key dropdowns**: Show referenced values as dropdown options when editing FK columns
+
+### Phase 20: Visual Database Tools
+- [ ] **ER diagram viewer**: Interactive entity-relationship diagram showing table relationships with zoom/pan
+- [ ] **Visual query builder**: Drag-and-drop interface for constructing JOIN/WHERE/GROUP BY queries
+- [ ] **Table diff**: Compare table structure between two connections (dev vs prod)
+- [ ] **Data diff**: Compare row data between environments, highlight differences
+- [ ] **Migration generator**: Generate ALTER statements from schema diff between two databases
+
+### Phase 21: Collaboration & Workflow
+- [ ] **Connection config export/import**: Export connection bundles as encrypted JSON, share with team
+- [ ] **Query snippets library**: Reusable parameterized query templates with variable substitution
+- [ ] **Favorite tables**: Quick-access pinned tables per connection in sidebar
+- [ ] **Query result bookmarks**: Save result snapshots with name and timestamp for later reference
+- [ ] **Workspace profiles**: Save and restore layout + open tabs + connection per project
+
+### Phase 22: Advanced Query Features
+- [ ] **Query result charts**: Generate bar, line, pie charts from SELECT result sets
+- [ ] **Side-by-side result comparison**: Compare two query results in split view with diff highlighting
+- [ ] **Parameterized query execution**: Prompt for variable inputs ($1, :name) before running queries
+- [ ] **Query profiling dashboard**: Execution time breakdown, index usage hints, optimization suggestions
+- [ ] **Auto-suggest indexes**: Analyze slow queries and recommend index creation
+
+### Phase 23: Quality & Trust
+- [ ] **End-to-end test suite**: Playwright tests against Docker-based test databases (PostgreSQL, MySQL, SQLite, MongoDB, Redis)
+- [ ] **Crash reporting**: Opt-in crash reporting via Sentry or similar service
+- [ ] **Anonymous telemetry**: Opt-in usage analytics for feature prioritization (Plausible/PostHog)
+- [ ] **In-app "What's New"**: Show changelog highlights after auto-update
+- [ ] **Config auto-backup**: Automatically back up connection configs to timestamped files
+
+### Phase 24: Schema Navigation & Management
+- [ ] **Active schema selector**: Dropdown at the top of the schema tree to pick the active/default schema, filters tree to show only selected schema(s)
+- [ ] **Multi-schema visibility**: Checkbox list to show/hide specific schemas (like pgAdmin), persisted per connection
+- [ ] **Default schema per connection**: Remember last-selected schema per connection, auto-expand on reconnect
+- [ ] **Schema search path display**: Show the effective search_path (PostgreSQL) or current database/schema context in the sidebar header
+- [ ] **Schema creation/deletion**: Right-click context menu to CREATE SCHEMA / DROP SCHEMA with confirmation dialog
+- [ ] **Cross-schema queries**: Auto-prefix table references with schema name when querying outside the active schema
 
 ## Architecture Notes
 

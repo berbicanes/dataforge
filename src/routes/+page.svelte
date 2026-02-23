@@ -255,9 +255,11 @@
     {/if}
   </div>
 
-  <div class="statusbar-area">
-    <StatusBar executionTime={lastExecutionTime} rowCount={lastRowCount} />
-  </div>
+  {#if !uiStore.showHome}
+    <div class="statusbar-area">
+      <StatusBar executionTime={lastExecutionTime} rowCount={lastRowCount} />
+    </div>
+  {/if}
 </div>
 
 {#if uiStore.showConnectionModal}
@@ -311,7 +313,7 @@
 <style>
   .app-layout {
     display: grid;
-    grid-template-rows: 44px 1fr 28px;
+    grid-template-rows: 44px 1fr auto;
     grid-template-columns: var(--sidebar-width) 1fr;
     grid-template-areas:
       "toolbar toolbar"

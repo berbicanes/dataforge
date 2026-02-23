@@ -9,6 +9,7 @@
 
   let activeConnection = $derived(connectionStore.activeConnection);
   let connectedConnections = $derived(connectionStore.connectedConnections);
+  let hasAnyConnections = $derived(connectedConnections.length > 0);
 
   function handleNewQuery() {
     if (connectionStore.activeConnectionId) {
@@ -48,22 +49,24 @@
   <div class="toolbar-left">
     <span class="branding">QueryArk</span>
 
-    <div class="toolbar-divider"></div>
+    {#if hasAnyConnections}
+      <div class="toolbar-divider"></div>
 
-    <button class="btn toolbar-btn" onclick={handleNewQuery}>
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-      New Query
-    </button>
+      <button class="btn toolbar-btn" onclick={handleNewQuery}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        New Query
+      </button>
 
-    <button class="btn toolbar-btn" onclick={handleRun}>
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M4 2l10 6-10 6V2z" fill="var(--success)"/>
-      </svg>
-      Run
-      <span class="kbd">Ctrl+Enter</span>
-    </button>
+      <button class="btn toolbar-btn" onclick={handleRun}>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M4 2l10 6-10 6V2z" fill="var(--success)"/>
+        </svg>
+        Run
+        <span class="kbd">Ctrl+Enter</span>
+      </button>
+    {/if}
   </div>
 
   <div class="toolbar-right">
@@ -118,51 +121,53 @@
       </svg>
     </button>
 
-    <div class="toolbar-divider"></div>
-    <div class="connection-selector">
-      <button
-        class="btn selector-btn"
-        onclick={(e) => { e.stopPropagation(); showConnectionDropdown = !showConnectionDropdown; }}
-      >
-        {#if activeConnection}
-          {@const meta = DB_METADATA[activeConnection.config.db_type]}
-          <span class="status-dot {activeConnection.status}"></span>
-          <span class="conn-name">{activeConnection.config.name}</span>
-          <span class="badge {meta.badgeClass}">
-            {meta.badge}
-          </span>
-        {:else}
-          <span class="text-muted">No connection</span>
-        {/if}
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="chevron" class:open={showConnectionDropdown}>
-          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-
-      {#if showConnectionDropdown}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="dropdown" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') showConnectionDropdown = false; }}>
-          {#if connectedConnections.length === 0}
-            <div class="dropdown-empty">No connected databases</div>
+    {#if hasAnyConnections}
+      <div class="toolbar-divider"></div>
+      <div class="connection-selector">
+        <button
+          class="btn selector-btn"
+          onclick={(e) => { e.stopPropagation(); showConnectionDropdown = !showConnectionDropdown; }}
+        >
+          {#if activeConnection}
+            {@const meta = DB_METADATA[activeConnection.config.db_type]}
+            <span class="status-dot {activeConnection.status}"></span>
+            <span class="conn-name">{activeConnection.config.name}</span>
+            <span class="badge {meta.badgeClass}">
+              {meta.badge}
+            </span>
           {:else}
-            {#each connectedConnections as conn}
-              {@const connMeta = DB_METADATA[conn.config.db_type]}
-              <button
-                class="dropdown-item"
-                class:active={conn.config.id === connectionStore.activeConnectionId}
-                onclick={() => selectConnection(conn.config.id)}
-              >
-                <span class="status-dot {conn.status}"></span>
-                <span class="truncate">{conn.config.name}</span>
-                <span class="badge {connMeta.badgeClass}">
-                  {connMeta.badge}
-                </span>
-              </button>
-            {/each}
+            <span class="text-muted">No connection</span>
           {/if}
-        </div>
-      {/if}
-    </div>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" class="chevron" class:open={showConnectionDropdown}>
+            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        {#if showConnectionDropdown}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="dropdown" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') showConnectionDropdown = false; }}>
+            {#if connectedConnections.length === 0}
+              <div class="dropdown-empty">No connected databases</div>
+            {:else}
+              {#each connectedConnections as conn}
+                {@const connMeta = DB_METADATA[conn.config.db_type]}
+                <button
+                  class="dropdown-item"
+                  class:active={conn.config.id === connectionStore.activeConnectionId}
+                  onclick={() => selectConnection(conn.config.id)}
+                >
+                  <span class="status-dot {conn.status}"></span>
+                  <span class="truncate">{conn.config.name}</span>
+                  <span class="badge {connMeta.badgeClass}">
+                    {connMeta.badge}
+                  </span>
+                </button>
+              {/each}
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>
 
