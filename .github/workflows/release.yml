@@ -73,7 +73,7 @@ jobs:
           tagName: v__VERSION__
           releaseName: 'QueryArk v__VERSION__'
           releaseBody: 'See the assets for download links and installation instructions.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
