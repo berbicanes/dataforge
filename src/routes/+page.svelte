@@ -8,7 +8,7 @@
   import { settingsStore } from '$lib/stores/settings.svelte';
   import * as connectionService from '$lib/services/connectionService';
   import * as schemaService from '$lib/services/schemaService';
-  import { checkForUpdates } from '$lib/services/updaterService';
+  import { checkForUpdates } from '$lib/services/updaterService.svelte';
   import { DB_METADATA } from '$lib/types/database';
   import Toolbar from '$lib/components/Toolbar.svelte';
   import Sidebar from '$lib/components/sidebar/Sidebar.svelte';

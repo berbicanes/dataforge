@@ -3,7 +3,7 @@
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { formatDuration, formatRowCount } from '$lib/utils/formatters';
-  import { updaterState, installUpdate } from '$lib/services/updaterService';
+  import { updaterState, installUpdate } from '$lib/services/updaterService.svelte';
 
   let { executionTime = null, rowCount = null }: {
     executionTime: number | null;
