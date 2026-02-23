@@ -4,6 +4,7 @@
   import { tabStore } from '$lib/stores/tabs.svelte';
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { favoritesStore } from '$lib/stores/favorites.svelte';
   import * as schemaService from '$lib/services/schemaService';
   import { executeQuery } from '$lib/services/tauri';
   import { quoteIdentifier } from '$lib/utils/sqlHelpers';
@@ -388,6 +389,42 @@
     return getColumnTypeIcon(field.data_type);
   }
 
+  // --- Table context menu ---
+  let tableContextMenu = $state<{ x: number; y: number; schema: string; table: string } | null>(null);
+
+  function handleTableContextMenu(e: MouseEvent, schema: string, table: string) {
+    e.preventDefault();
+    tableContextMenu = { x: e.clientX, y: e.clientY, schema, table };
+  }
+
+  function closeTableContextMenu() {
+    tableContextMenu = null;
+  }
+
+  function ctxToggleFavorite() {
+    if (!tableContextMenu) return;
+    favoritesStore.toggle(connectionId, tableContextMenu.schema, tableContextMenu.table);
+    closeTableContextMenu();
+  }
+
+  function ctxOpenTable() {
+    if (!tableContextMenu) return;
+    handleTableDblClick(tableContextMenu.schema, tableContextMenu.table);
+    closeTableContextMenu();
+  }
+
+  // --- Favorites ---
+  let favoriteKeys = $derived(favoritesStore.getFavorites(connectionId));
+
+  function handleFavoriteClick(key: string) {
+    const [schema, table] = key.split('.');
+    if (schema && table) handleTableDblClick(schema, table);
+  }
+
+  function handleRemoveFavorite(key: string) {
+    favoritesStore.removeFavorite(connectionId, key);
+  }
+
   // --- Schema context menu ---
   let schemaContextMenu = $state<{ x: number; y: number; schemaName: string } | null>(null);
   let createSchemaInput = $state<{ value: string } | null>(null);
@@ -520,7 +557,7 @@
   );
 </script>
 
-<svelte:window onclick={closeSchemaContextMenu} />
+<svelte:window onclick={() => { closeSchemaContextMenu(); closeTableContextMenu(); }} />
 
 <div class="schema-tree">
   {#if isSqlLike || containers.length > 0 || schemas.length > 0}
@@ -538,6 +575,36 @@
           </svg>
         </button>
       {/if}
+    </div>
+  {/if}
+
+  {#if favoriteKeys.length > 0}
+    <div class="favorites-section">
+      <TreeNode
+        label="Favorites"
+        icon="\u2605"
+        expandable={true}
+        depth={0}
+      >
+        {#snippet children()}
+          {#each favoriteKeys as key}
+            {@const parts = key.split('.')}
+            {@const tableName = parts[1] ?? parts[0]}
+            <div class="favorite-item">
+              <button class="favorite-btn" onclick={() => handleFavoriteClick(key)} title={key}>
+                <span class="fav-star">\u2605</span>
+                <span class="fav-name truncate">{tableName}</span>
+                <span class="fav-schema">{parts[0]}</span>
+              </button>
+              <button class="fav-remove" onclick={() => handleRemoveFavorite(key)} title="Remove from favorites">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          {/each}
+        {/snippet}
+      </TreeNode>
     </div>
   {/if}
 
@@ -620,13 +687,14 @@
                       {#snippet children(table: TableInfo)}
                         <TreeNode
                           label={table.name}
-                          icon={ICON_TABLE}
+                          icon={favoritesStore.isFavorite(connectionId, schema.name, table.name) ? '\u2605' : ICON_TABLE}
                           expandable={true}
                           depth={2}
                           tooltip={getTableTooltip(schema.name, table.name)}
                           suffix={getTableSuffix(schema.name, table.name)}
                           onexpand={(exp) => handleTableExpand(schema.name, table.name, exp)}
                           ondblclick={() => handleTableDblClick(schema.name, table.name)}
+                          oncontextmenu={(e) => handleTableContextMenu(e, schema.name, table.name)}
                         >
                           {#snippet children()}
                             {#each getColumns(schema.name, table.name) as column}
@@ -861,6 +929,33 @@
     </div>
   {/if}
 </div>
+
+{#if tableContextMenu}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="schema-context-menu"
+    style="left: {tableContextMenu.x}px; top: {tableContextMenu.y}px"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => { if (e.key === 'Escape') closeTableContextMenu(); }}
+  >
+    <button class="context-item" onclick={ctxOpenTable}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M3 2h7l3 3v9H3V2z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+        <path d="M6 8h4M6 11h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+      </svg>
+      Open Table
+    </button>
+    <button class="context-item" onclick={ctxToggleFavorite}>
+      {#if favoritesStore.isFavorite(connectionId, tableContextMenu.schema, tableContextMenu.table)}
+        <span style="font-size: 12px; width: 12px; text-align: center;">\u2605</span>
+        Remove from Favorites
+      {:else}
+        <span style="font-size: 12px; width: 12px; text-align: center;">\u2606</span>
+        Add to Favorites
+      {/if}
+    </button>
+  </div>
+{/if}
 
 {#if schemaContextMenu}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1145,5 +1240,75 @@
   .create-schema-input input::placeholder {
     color: var(--text-muted);
     font-style: italic;
+  }
+
+  /* Favorites section */
+  .favorites-section {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 2px;
+  }
+
+  .favorite-item {
+    display: flex;
+    align-items: center;
+    padding-left: 24px;
+  }
+
+  .favorite-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    padding: 3px 4px;
+    font-size: 11px;
+    text-align: left;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-primary);
+    min-width: 0;
+  }
+
+  .favorite-btn:hover {
+    background: var(--bg-hover);
+    border-radius: var(--radius-sm);
+  }
+
+  .fav-star {
+    color: var(--warning, #e5c07b);
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  .fav-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fav-schema {
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .fav-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    opacity: 0;
+    flex-shrink: 0;
+  }
+
+  .favorite-item:hover .fav-remove {
+    opacity: 1;
+  }
+
+  .fav-remove:hover {
+    color: var(--error);
   }
 </style>

@@ -1,4 +1,5 @@
 import type { DatabaseType } from '$lib/types/connection';
+import type { QuerySnippet } from '$lib/types/query';
 
 export interface CreateTableContext {
   connectionId: string;
@@ -52,6 +53,15 @@ class UiStore {
   alterTableContext = $state<AlterTableContext | null>(null);
   showIndexModal = $state(false);
   indexModalContext = $state<IndexModalContext | null>(null);
+
+  // Phase 21 — Collaboration & Workflow
+  showSnippetModal = $state(false);
+  showSnippetLibrary = $state(false);
+  snippetToEdit = $state<QuerySnippet | null>(null);
+  showSnippetVariablePrompt = $state(false);
+  snippetToInsert = $state<QuerySnippet | null>(null);
+  showWorkspaceModal = $state(false);
+  showBookmarkList = $state(false);
 
   dismissHome() {
     if (!this.showHome) return;

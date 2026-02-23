@@ -7,6 +7,7 @@
   import * as connectionService from '$lib/services/connectionService';
   import { DB_METADATA } from '$lib/types/database';
   import type { ConnectionState } from '$lib/types/connection';
+  import { exportConnections } from '$lib/services/connectionExportService';
   import ConnectionGroup from './ConnectionGroup.svelte';
 
   let contextMenu = $state<{ x: number; y: number; connection: ConnectionState } | null>(null);
@@ -115,6 +116,29 @@
       const config = { ...contextMenu.connection.config, group: undefined };
       connectionStore.updateConnection(config);
       closeContextMenu();
+    }
+  }
+
+  async function ctxExportConnection() {
+    if (!contextMenu) return;
+    const config = contextMenu.connection.config;
+    closeContextMenu();
+    try {
+      const success = await exportConnections([config]);
+      if (success) uiStore.showSuccess('Connection exported');
+    } catch (err) {
+      uiStore.showError(`Export failed: ${err}`);
+    }
+  }
+
+  async function ctxExportAll() {
+    closeContextMenu();
+    const configs = connectionStore.connections.map(c => c.config);
+    try {
+      const success = await exportConnections(configs);
+      if (success) uiStore.showSuccess(`${configs.length} connections exported`);
+    } catch (err) {
+      uiStore.showError(`Export failed: ${err}`);
     }
   }
 
@@ -269,6 +293,21 @@
         Remove from Group
       </button>
     {/if}
+    <div class="context-divider"></div>
+    <button class="context-item" onclick={ctxExportConnection}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      Export Connection
+    </button>
+    <button class="context-item" onclick={ctxExportAll}>
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      Export All Connections
+    </button>
     <div class="context-divider"></div>
     <button class="context-item danger" onclick={ctxDelete}>
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">

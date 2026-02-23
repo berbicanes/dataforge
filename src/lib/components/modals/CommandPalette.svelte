@@ -175,6 +175,9 @@
           });
         }
       },
+      openSnippets: () => { uiStore.showSnippetLibrary = true; },
+      openWorkspaces: () => { uiStore.showWorkspaceModal = true; },
+      openBookmarks: () => { uiStore.showBookmarkList = true; },
     };
     for (const shortcut of DEFAULT_SHORTCUTS) {
       if (actionMap[shortcut.id]) {

@@ -6,6 +6,10 @@
   import { queryHistoryStore } from '$lib/stores/queryHistory.svelte';
   import { savedQueriesStore } from '$lib/stores/savedQueries.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
+  import { favoritesStore } from '$lib/stores/favorites.svelte';
+  import { snippetsStore } from '$lib/stores/snippets.svelte';
+  import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
+  import { workspacesStore } from '$lib/stores/workspaces.svelte';
   import * as connectionService from '$lib/services/connectionService';
   import * as schemaService from '$lib/services/schemaService';
   import { checkForUpdates } from '$lib/services/updaterService.svelte';
@@ -26,6 +30,11 @@
   import CommandPalette from '$lib/components/modals/CommandPalette.svelte';
   import SettingsModal from '$lib/components/modals/SettingsModal.svelte';
   import AboutModal from '$lib/components/modals/AboutModal.svelte';
+  import SnippetModal from '$lib/components/modals/SnippetModal.svelte';
+  import SnippetLibrary from '$lib/components/modals/SnippetLibrary.svelte';
+  import SnippetVariablePrompt from '$lib/components/modals/SnippetVariablePrompt.svelte';
+  import BookmarkList from '$lib/components/modals/BookmarkList.svelte';
+  import WorkspaceModal from '$lib/components/modals/WorkspaceModal.svelte';
 
   let lastExecutionTime = $state<number | null>(null);
   let lastRowCount = $state<number | null>(null);
@@ -111,6 +120,10 @@
       settingsStore.init(),
       queryHistoryStore.init(),
       savedQueriesStore.init(),
+      favoritesStore.init(),
+      snippetsStore.init(),
+      bookmarksStore.init(),
+      workspacesStore.init(),
     ]);
 
     // Phase 2: Apply settings (depends on settingsStore)
@@ -302,6 +315,26 @@
 
 {#if uiStore.showAboutModal}
   <AboutModal />
+{/if}
+
+{#if uiStore.showSnippetModal}
+  <SnippetModal />
+{/if}
+
+{#if uiStore.showSnippetLibrary}
+  <SnippetLibrary />
+{/if}
+
+{#if uiStore.showSnippetVariablePrompt}
+  <SnippetVariablePrompt />
+{/if}
+
+{#if uiStore.showBookmarkList}
+  <BookmarkList />
+{/if}
+
+{#if uiStore.showWorkspaceModal}
+  <WorkspaceModal />
 {/if}
 
 {#if uiStore.errorMessage}

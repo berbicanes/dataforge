@@ -4,6 +4,7 @@
   import { connectionStore } from '$lib/stores/connections.svelte';
   import { schemaStore } from '$lib/stores/schema.svelte';
   import { savedQueriesStore } from '$lib/stores/savedQueries.svelte';
+  import { bookmarksStore } from '$lib/stores/bookmarks.svelte';
   import { transactionStore } from '$lib/stores/transaction.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
   import { settingsStore } from '$lib/stores/settings.svelte';
@@ -42,6 +43,8 @@
   let showSaved = $state(false);
   let saveName = $state('');
   let showSaveInput = $state(false);
+  let showBookmarkInput = $state(false);
+  let bookmarkName = $state('');
 
   // Transaction state
   let inTransaction = $derived(transactionStore.isInTransaction(tab.connectionId));
@@ -449,6 +452,37 @@
     }
   }
 
+  function handleBookmark() {
+    if (showBookmarkInput) {
+      if (bookmarkName.trim() && results.length > 0) {
+        const r = results[0];
+        bookmarksStore.save({
+          name: bookmarkName.trim(),
+          connectionId: tab.connectionId,
+          sql: sqlValue,
+          columns: r.columns,
+          rows: r.rows,
+          rowCount: r.row_count,
+          executionTimeMs: r.execution_time_ms,
+        });
+        bookmarkName = '';
+        showBookmarkInput = false;
+        uiStore.showSuccess('Result bookmarked');
+      }
+    } else {
+      showBookmarkInput = true;
+    }
+  }
+
+  function handleBookmarkKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      handleBookmark();
+    } else if (e.key === 'Escape') {
+      showBookmarkInput = false;
+      bookmarkName = '';
+    }
+  }
+
   async function handleBeginTransaction() {
     try {
       await tauri.beginTransaction(tab.connectionId);
@@ -625,6 +659,26 @@
           rows={results[0].rows}
           connectionId={tab.connectionId}
         />
+        {#if showBookmarkInput}
+          <input
+            class="save-input"
+            type="text"
+            placeholder="Bookmark name..."
+            bind:value={bookmarkName}
+            onkeydown={handleBookmarkKeydown}
+            onblur={() => { if (!bookmarkName.trim()) showBookmarkInput = false; }}
+          />
+        {/if}
+        <button
+          class="toolbar-btn"
+          onclick={handleBookmark}
+          title="Bookmark Result"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Bookmark</span>
+        </button>
       {/if}
       {#if showSaveInput}
         <input

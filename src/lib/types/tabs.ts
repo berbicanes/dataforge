@@ -1,5 +1,5 @@
 export type TabType = 'query' | 'table' | 'document' | 'keyvalue' | 'graph'
-  | 'diagram' | 'tablediff' | 'datadiff' | 'visualquery';
+  | 'diagram' | 'tablediff' | 'datadiff' | 'visualquery' | 'bookmark';
 
 export interface Tab {
   id: string;
@@ -20,4 +20,6 @@ export interface Tab {
   diffTargetConnectionId?: string;
   diffTargetSchema?: string;
   diffTargetTable?: string;
+  // Phase 21: Bookmarks
+  bookmarkId?: string;
 }

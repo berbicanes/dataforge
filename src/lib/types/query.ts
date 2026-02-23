@@ -63,3 +63,33 @@ export interface SavedQuery {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface SnippetVariable {
+  name: string;
+  defaultValue: string;
+  description?: string;
+}
+
+export interface QuerySnippet {
+  id: string;
+  name: string;
+  description: string;
+  sql: string;
+  variables: SnippetVariable[];
+  connectionId?: string;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ResultBookmark {
+  id: string;
+  name: string;
+  connectionId: string;
+  sql: string;
+  columns: ColumnDef[];
+  rows: CellValue[][];
+  rowCount: number;
+  executionTimeMs: number;
+  createdAt: number;
+}

@@ -22,6 +22,9 @@ export const DEFAULT_SHORTCUTS: ShortcutAction[] = [
   { id: 'openTableDiff', label: 'Table Structure Diff', category: 'General', defaultKey: '' },
   { id: 'openDataDiff', label: 'Data Diff', category: 'General', defaultKey: '' },
   { id: 'openVisualQuery', label: 'Visual Query Builder', category: 'General', defaultKey: '' },
+  { id: 'openSnippets', label: 'Query Snippets', category: 'General', defaultKey: '' },
+  { id: 'openWorkspaces', label: 'Workspace Profiles', category: 'General', defaultKey: '' },
+  { id: 'openBookmarks', label: 'Result Bookmarks', category: 'General', defaultKey: '' },
 ];
 
 export type ShortcutId = typeof DEFAULT_SHORTCUTS[number]['id'];

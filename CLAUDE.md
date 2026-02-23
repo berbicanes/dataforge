@@ -211,6 +211,11 @@ npm run check            # TypeScript/Svelte type checking
 - Table structure diff — compare columns/indexes/foreign keys between two connections/schemas, color-coded added/removed/changed status, detailed change descriptions
 - Migration generator — generates dialect-aware ALTER TABLE statements from table diff results (PostgreSQL, MySQL, MSSQL, SQLite), open in query tab or copy to clipboard
 - Data diff — compare row data across two connections matched by primary key, side-by-side source/target display, changed cell highlighting, filter by status (added/removed/changed/identical)
+- Favorite tables — star/unstar tables per connection, favorites section at top of schema tree, right-click context menu toggle
+- Connection config export/import — export connections as JSON (passwords excluded for security), import from file dialog, new UUIDs assigned on import
+- Query snippets library — create/edit/delete parameterized SQL templates with `{{variable}}` substitution, tags, search, variable auto-detection, insert into editor with variable prompt
+- Query result bookmarks — save query results (columns + rows + SQL) with name, view in dedicated read-only tab, re-run original query, max 50 bookmarks
+- Workspace profiles — save/restore complete workspace state (open tabs, active connection, sidebar width/collapsed), rename, update (overwrite), delete
 
 ### Stub databases (feature-gated, not yet functional):
 - Oracle (`cargo build --features oracle` — requires Oracle Instant Client)
@@ -381,12 +386,12 @@ Separate repository — SvelteKit static site deployed to Vercel/Netlify/Cloudfl
 - [x] **Data diff**: Compare row data between environments, highlight differences
 - [x] **Migration generator**: Generate ALTER statements from schema diff between two databases
 
-### Phase 21: Collaboration & Workflow
-- [ ] **Connection config export/import**: Export connection bundles as encrypted JSON, share with team
-- [ ] **Query snippets library**: Reusable parameterized query templates with variable substitution
-- [ ] **Favorite tables**: Quick-access pinned tables per connection in sidebar
-- [ ] **Query result bookmarks**: Save result snapshots with name and timestamp for later reference
-- [ ] **Workspace profiles**: Save and restore layout + open tabs + connection per project
+### Phase 21: Collaboration & Workflow ✅
+- [x] **Connection config export/import**: Export connection bundles as JSON (passwords excluded), import from file with new UUIDs
+- [x] **Query snippets library**: Reusable parameterized query templates with `{{variable}}` substitution, tags, search
+- [x] **Favorite tables**: Quick-access pinned tables per connection in sidebar with star icons
+- [x] **Query result bookmarks**: Save result snapshots with name and timestamp, view in dedicated tab, re-run query
+- [x] **Workspace profiles**: Save and restore layout + open tabs + connection + sidebar state per project
 
 ### Phase 22: Advanced Query Features
 - [ ] **Query result charts**: Generate bar, line, pie charts from SELECT result sets

@@ -3,6 +3,8 @@
   import { uiStore } from '$lib/stores/ui.svelte';
   import { DB_METADATA } from '$lib/types/database';
   import * as schemaService from '$lib/services/schemaService';
+  import * as connectionService from '$lib/services/connectionService';
+  import { importConnections } from '$lib/services/connectionExportService';
   import { executeQuery } from '$lib/services/tauri';
   import ConnectionList from './ConnectionList.svelte';
   import SchemaTree from './SchemaTree.svelte';
@@ -63,6 +65,19 @@
     uiStore.openConnectionModal();
   }
 
+  async function handleImportConnections() {
+    try {
+      const configs = await importConnections();
+      if (configs.length === 0) return;
+      for (const config of configs) {
+        await connectionService.saveConnection(config);
+      }
+      uiStore.showSuccess(`${configs.length} connection${configs.length > 1 ? 's' : ''} imported`);
+    } catch (err) {
+      uiStore.showError(`Import failed: ${err}`);
+    }
+  }
+
   async function handleRefresh() {
     const connId = connectionStore.activeConnectionId;
     if (!connId) return;
@@ -109,11 +124,19 @@
 <div class="sidebar" class:resizing={isResizing}>
   <div class="sidebar-header">
     <span class="sidebar-title">Connections</span>
-    <button class="btn btn-sm add-btn" onclick={handleAddConnection} title="Add connection">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </button>
+    <div class="header-actions">
+      <button class="btn btn-sm add-btn" onclick={handleImportConnections} title="Import connections">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M8 10V2M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="btn btn-sm add-btn" onclick={handleAddConnection} title="Add connection">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="sidebar-content" bind:this={scrollContainer}>
@@ -187,6 +210,11 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--text-muted);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 2px;
   }
 
   .add-btn {
