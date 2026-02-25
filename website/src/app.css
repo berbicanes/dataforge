@@ -72,8 +72,7 @@ html {
 }
 
 body {
-  background: linear-gradient(135deg, #0d1a35 0%, #c0cce4 100%);
-  background-attachment: fixed;
+  background: rgba(15, 17, 23, 0.92);
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 16px;
